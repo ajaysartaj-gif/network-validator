@@ -113,10 +113,15 @@ def final_decision(analysis):
 # -------------------------------
 st.title("🚀 Network Pre-Change Validator")
 
-config_a = st.text_area("Paste Current Config")
-config_b = st.text_area("Paste Proposed Config")
+config_a_file = st.file_uploader("Upload Current Config", type=["txt"])
+config_b_file = st.file_uploader("Upload Proposed Config", type=["txt"])
 
-if st.button("Analyze"):
+if st.button("Analyze") and config_a_file and config_b_file:
+
+   if config_a_file and config_b_file:
+
+    config_a = config_a_file.read().decode("utf-8")
+    config_b = config_b_file.read().decode("utf-8")
 
     parsed_a = parse_config(config_a)
     parsed_b = parse_config(config_b)
