@@ -134,16 +134,50 @@ def final_decision(analysis):
 # -------------------------------
 st.title("🚀 Network Pre-Change Validator")
 
-config_a_file = st.file_uploader("Upload Current Config", type=["txt"])
-config_b_file = st.file_uploader("Upload Proposed Config", type=["txt"])
+config_a_file = st.file_uploader("Upload Current Config", type=None)
+config_b_file = st.file_uploader("Upload Proposed Config", type=None)
 
-if st.button("Analyze") and config_a_file and config_b_file:
+if st.button("Analyze"):
+
+    if config_a_file is None or config_b_file is None:
+        st.error("Please upload both config files")
+    else:
+        config_a = read_file(config_a_file)
+        config_b = read_file(config_b_file)
+
+        parsed_a = parse_config(config_a)
+        parsed_b = parse_config(config_b)
+
+        changes = compare_configs(parsed_a, parsed_b)
+        analysis = impact_analysis(changes)
+
+        if analysis is None:
+            st.error("Error in analysis")
+        else:
+            decision = final_decision(analysis)
+
+            st.subheader("🔍 Changes Detected")
+            for c in changes:
+                st.write("-", c)
+
+            st.subheader("📊 Impact Analysis")
+            for a in analysis:
+                st.write(f"{a['change']} → {a['impact']} (Risk: {a['risk']})")
+
+            st.subheader("🚨 Final Decision")
+            st.write(decision)
+            
 
    if config_a_file and config_b_file:
 
-    config_a = config_a_file.read().decode("utf-8")
-    config_b = config_b_file.read().decode("utf-8")
-
+   def read_file(file):
+    try:
+        return file.read().decode("utf-8")
+    except:
+        return str(file.read())
+        config_a = read_file(config_a_file)
+        config_b = read_file(config_b_file)
+        
     parsed_a = parse_config(config_a)
     parsed_b = parse_config(config_b)
 
