@@ -181,20 +181,41 @@ def final_decision(analysis):
 # -------------------------------
 # UI
 # -------------------------------
+
+# -------------------------------
+# UI
+# -------------------------------
 st.title("🚀 Network Pre-Change Validator")
 
-config_a_file = st.file_uploader("Upload Current Config")
-config_b_file = st.file_uploader("Upload Proposed Config")
+st.subheader("📥 Input Options")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    config_a_text = st.text_area("Paste Current Config (optional)", height=300)
+    config_a_file = st.file_uploader("Or Upload Current Config")
+
+with col2:
+    config_b_text = st.text_area("Paste Proposed Config (optional)", height=300)
+    config_b_file = st.file_uploader("Or Upload Proposed Config")
+
+def get_config(text, file):
+    # Priority: pasted text → file → empty
+    if text and text.strip():
+        return text
+    elif file is not None:
+        return read_file(file)
+    else:
+        return ""
 
 if st.button("Analyze"):
 
-    if config_a_file is None or config_b_file is None:
-        st.error("Please upload both config files")
+    config_a = get_config(config_a_text, config_a_file)
+    config_b = get_config(config_b_text, config_b_file)
 
+    if not config_a or not config_b:
+        st.error("Provide both configs (paste or upload)")
     else:
-        config_a = read_file(config_a_file)
-        config_b = read_file(config_b_file)
-
         parsed_a = parse_config(config_a)
         parsed_b = parse_config(config_b)
 
