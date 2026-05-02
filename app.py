@@ -168,20 +168,22 @@ def calculate_risk_score(analysis):
 # FINAL DECISION
 # -------------------------------
 def final_decision(analysis):
-    score = calculate_risk_score(analysis)
 
-    if score >= 5:
+    has_high = False
+    has_medium = False
+
+    for item in analysis:
+        if item["risk"] == "HIGH":
+            has_high = True
+        elif item["risk"] == "MEDIUM":
+            has_medium = True
+
+    if has_high:
         return "❌ DO NOT APPLY (CRITICAL RISK)"
-    elif score >= 3:
+    elif has_medium:
         return "⚠️ REVIEW REQUIRED"
     else:
         return "✅ SAFE TO APPLY"
-
-
-# -------------------------------
-# UI
-# -------------------------------
-
 # -------------------------------
 # UI
 # -------------------------------
