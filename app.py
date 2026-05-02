@@ -55,6 +55,8 @@ def parse_config(config):
         "acls": list(acls),
         "routing": list(routing)
     }
+    st.write("DEBUG PARSED A:", parsed_a)
+st.write("DEBUG PARSED B:", parsed_b)
 
 # -------------------------------
 # COMPARE
