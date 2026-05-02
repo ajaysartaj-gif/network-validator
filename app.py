@@ -1,6 +1,16 @@
 import streamlit as st
 
 # -------------------------------
+# FILE READER
+# -------------------------------
+def read_file(file):
+    try:
+        return file.read().decode("utf-8")
+    except:
+        return str(file.read())
+
+
+# -------------------------------
 # PARSER
 # -------------------------------
 def parse_config(config):
@@ -62,7 +72,7 @@ def compare_configs(c1, c2):
 
 
 # -------------------------------
-# IMPACT
+# IMPACT ANALYSIS
 # -------------------------------
 def impact_analysis(changes):
     results = []
@@ -71,29 +81,52 @@ def impact_analysis(changes):
 
         if "Routing removed" in change:
             risk = "HIGH"
-            impact = "Routes may not be advertised"
+            impact = "Routing removed → Core network connectivity may break"
 
         elif "ACL removed" in change:
             risk = "HIGH"
-            impact = "Security risk, traffic filtering removed"
+            impact = "Security policy removed → Traffic may be unrestricted"
 
         elif "Interface removed" in change:
             risk = "MEDIUM"
-            impact = "Device may disconnect"
+            impact = "Device connected may lose connectivity"
 
         elif "VLAN removed" in change:
             risk = "HIGH"
-            impact = "Users may lose connectivity"
+            impact = "Users in VLAN may lose access"
+
+        elif "Routing added" in change:
+            risk = "MEDIUM"
+            impact = "New routing introduced → Verify neighbors and redistribution"
+
+        elif "ACL added" in change:
+            risk = "MEDIUM"
+            impact = "New security rule applied → Verify traffic impact"
+
+        elif "Interface added" in change:
+            risk = "LOW"
+            impact = "New interface added → Check configuration"
+
+        elif "VLAN added" in change:
+            risk = "LOW"
+            impact = "New VLAN created → Ensure routing setup"
 
         else:
             risk = "LOW"
-            impact = "Minor change"
+            impact = "Minor change detected"
 
         results.append({
             "change": change,
             "impact": impact,
             "risk": risk
         })
+
+    return results
+
+
+# -------------------------------
+# RISK SCORE
+# -------------------------------
 def calculate_risk_score(analysis):
     score = 0
 
@@ -108,11 +141,10 @@ def calculate_risk_score(analysis):
             score += 3
 
     return score
-    return results
 
 
 # -------------------------------
-# DECISION
+# FINAL DECISION
 # -------------------------------
 def final_decision(analysis):
     score = calculate_risk_score(analysis)
@@ -123,10 +155,6 @@ def final_decision(analysis):
         return "⚠️ REVIEW REQUIRED"
     else:
         return "✅ SAFE TO APPLY"
-    for item in analysis:
-        if item["risk"] == "HIGH":
-            return "❌ DO NOT APPLY"
-    return "✅ SAFE TO APPLY"
 
 
 # -------------------------------
@@ -134,13 +162,14 @@ def final_decision(analysis):
 # -------------------------------
 st.title("🚀 Network Pre-Change Validator")
 
-config_a_file = st.file_uploader("Upload Current Config", type=None)
-config_b_file = st.file_uploader("Upload Proposed Config", type=None)
+config_a_file = st.file_uploader("Upload Current Config")
+config_b_file = st.file_uploader("Upload Proposed Config")
 
 if st.button("Analyze"):
 
     if config_a_file is None or config_b_file is None:
         st.error("Please upload both config files")
+
     else:
         config_a = read_file(config_a_file)
         config_b = read_file(config_b_file)
@@ -150,48 +179,18 @@ if st.button("Analyze"):
 
         changes = compare_configs(parsed_a, parsed_b)
         analysis = impact_analysis(changes)
+        decision = final_decision(analysis)
 
-        if analysis is None:
-            st.error("Error in analysis")
+        st.subheader("🔍 Changes Detected")
+        if not changes:
+            st.write("No changes detected")
         else:
-            decision = final_decision(analysis)
-
-            st.subheader("🔍 Changes Detected")
             for c in changes:
                 st.write("-", c)
 
-            st.subheader("📊 Impact Analysis")
-            for a in analysis:
-                st.write(f"{a['change']} → {a['impact']} (Risk: {a['risk']})")
+        st.subheader("📊 Impact Analysis")
+        for a in analysis:
+            st.write(f"{a['change']} → {a['impact']} (Risk: {a['risk']})")
 
-            st.subheader("🚨 Final Decision")
-            st.write(decision)
-            
-
-   if config_a_file and config_b_file:
-
-   def read_file(file):
-    try:
-        return file.read().decode("utf-8")
-    except:
-        return str(file.read())
-        config_a = read_file(config_a_file)
-        config_b = read_file(config_b_file)
-        
-    parsed_a = parse_config(config_a)
-    parsed_b = parse_config(config_b)
-
-    changes = compare_configs(parsed_a, parsed_b)
-    analysis = impact_analysis(changes)
-    decision = final_decision(analysis)
-
-    st.subheader("🔍 Changes Detected")
-    for c in changes:
-        st.write("-", c)
-
-    st.subheader("📊 Impact Analysis")
-    for a in analysis:
-        st.write(f"{a['change']} → {a['impact']} (Risk: {a['risk']})")
-
-    st.subheader("🚨 Final Decision")
-    st.write(decision)
+        st.subheader("🚨 Final Decision")
+        st.write(decision)
