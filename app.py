@@ -24,28 +24,33 @@ def parse_config(config):
     for line in lines:
         line = line.strip().lower()
 
-        if not line or line.startswith("!"):
+        if not line:
             continue
 
-        if line.startswith("hostname"):
+        # Remove comments
+        if line.startswith("!") or line.startswith("#"):
+            continue
+
+        # Flexible matching
+        if "hostname" in line:
             parts = line.split()
             if len(parts) > 1:
-                hostname = parts[1]
+                hostname = parts[-1]
 
         elif line.startswith("vlan"):
             parts = line.split()
             if len(parts) > 1:
-                vlans.add(parts[1])
+                vlans.add(parts[-1])
 
-        elif line.startswith("interface"):
+        elif "interface" in line:
             parts = line.split()
             if len(parts) > 1:
-                interfaces.add(parts[1])
+                interfaces.add(parts[-1])
 
-        elif line.startswith("access-list"):
+        elif "access-list" in line:
             acls.add(line)
 
-        elif line.startswith("router ospf") or line.startswith("router bgp"):
+        elif "router ospf" in line or "router bgp" in line:
             routing.add(line)
 
     return {
@@ -55,6 +60,7 @@ def parse_config(config):
         "acls": list(acls),
         "routing": list(routing)
     }
+
 # -------------------------------
 # COMPARE
 # -------------------------------
@@ -176,8 +182,8 @@ if st.button("Analyze"):
         st.error("Please upload both config files")
 
     else:
-        config_a = read_file(config_a_file)
-        config_b = read_file(config_b_file)
+       st.write("RAW CONFIG A:", config_a[:3000])
+       st.write("RAW CONFIG B:", config_b[:3000])
 
         parsed_a = parse_config(config_a)
         parsed_b = parse_config(config_b)
