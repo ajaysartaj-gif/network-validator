@@ -100,21 +100,39 @@ def impact_analysis(changes):
     results = []
 
     for change in changes:
-        if "routing removed" in change:
+        c = change.lower()   # ✅ normalize
+
+        if "routing removed" in c:
             risk = "HIGH"
             impact = "Routing removed → network connectivity may break"
 
-        elif "acl removed" in change:
+        elif "acl removed" in c:
             risk = "HIGH"
             impact = "Security rule removed → traffic may be unrestricted"
 
-        elif "interface removed" in change:
+        elif "interface removed" in c:
             risk = "MEDIUM"
             impact = "Connected device may lose connectivity"
 
-        elif "vlan removed" in change:
+        elif "vlan removed" in c:
             risk = "HIGH"
             impact = "Users in VLAN may lose access"
+
+        elif "routing added" in c:
+            risk = "MEDIUM"
+            impact = "New routing introduced → verify neighbors"
+
+        elif "acl added" in c:
+            risk = "MEDIUM"
+            impact = "New security rule applied"
+
+        elif "interface added" in c:
+            risk = "LOW"
+            impact = "New interface added"
+
+        elif "vlan added" in c:
+            risk = "LOW"
+            impact = "New VLAN created"
 
         else:
             risk = "LOW"
@@ -127,8 +145,6 @@ def impact_analysis(changes):
         })
 
     return results
-
-
 # -------------------------------
 # RISK SCORE
 # -------------------------------
