@@ -182,7 +182,7 @@ if st.button("Analyze"):
         parsed_a = parse_config(config_a)
         parsed_b = parse_config(config_b)
         st.write("DEBUG A:", parsed_a)
-st.write("DEBUG B:", parsed_b)
+        st.write("DEBUG B:", parsed_b)
 
         changes = compare_configs(parsed_a, parsed_b)
         analysis = impact_analysis(changes)
