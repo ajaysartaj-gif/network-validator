@@ -14,53 +14,63 @@ def read_file(file):
 # PARSER
 # -------------------------------
 def parse_config(config):
-    lines = config.split("\n")
+    if not config or len(config.strip()) == 0:
+        return {
+            "hostname": None,
+            "vlans": [],
+            "interfaces": [],
+            "acls": [],
+            "routing": []
+        }
+
+    lines = config.splitlines()
+
     hostname = None
     vlans = set()
     interfaces = set()
     acls = set()
     routing = set()
 
-    for line in lines:
-        line = line.strip().lower()
+    for raw_line in lines:
+        line = raw_line.strip().lower()
 
-        if not line:
+        # Skip empty or comments
+        if not line or line.startswith(("!", "#", "//")):
             continue
 
-        # Remove comments
-        if line.startswith("!") or line.startswith("#"):
-            continue
-
-        # Flexible matching
-        if "hostname" in line:
+        # HOSTNAME
+        if line.startswith("hostname "):
             parts = line.split()
-            if len(parts) > 1:
-                hostname = parts[-1]
+            if len(parts) >= 2:
+                hostname = parts[1]
 
-        elif line.startswith("vlan"):
+        # VLAN
+        elif line.startswith("vlan "):
             parts = line.split()
-            if len(parts) > 1:
-                vlans.add(parts[-1])
+            if len(parts) >= 2 and parts[1].isdigit():
+                vlans.add(parts[1])
 
-        elif "interface" in line:
+        # INTERFACE
+        elif line.startswith("interface "):
             parts = line.split()
-            if len(parts) > 1:
-                interfaces.add(parts[-1])
+            if len(parts) >= 2:
+                interfaces.add(parts[1])
 
-        elif "access-list" in line:
+        # ACL
+        elif line.startswith("access-list"):
             acls.add(line)
 
-        elif "router ospf" in line or "router bgp" in line:
+        # ROUTING
+        elif line.startswith("router ospf") or line.startswith("router bgp"):
             routing.add(line)
 
     return {
         "hostname": hostname,
-        "vlans": list(vlans),
-        "interfaces": list(interfaces),
-        "acls": list(acls),
-        "routing": list(routing)
+        "vlans": sorted(list(vlans)),
+        "interfaces": sorted(list(interfaces)),
+        "acls": sorted(list(acls)),
+        "routing": sorted(list(routing))
     }
-
 # -------------------------------
 # COMPARE
 # -------------------------------
@@ -185,10 +195,17 @@ if st.button("Analyze"):
        st.write("RAW CONFIG A:", config_a[:3000])
        st.write("RAW CONFIG B:", config_b[:3000])
 
-        parsed_a = parse_config(config_a)
-        parsed_b = parse_config(config_b)
-        st.write("DEBUG A:", parsed_a)
-        st.write("DEBUG B:", parsed_b)
+       parsed_a = parse_config(config_a)
+       parsed_b = parse_config(config_b)
+
+       # 🔍 Controlled debug (only for you)
+       with st.expander("DEBUG (Parser Output)"):
+       st.json({"CONFIG_A": parsed_a, "CONFIG_B": parsed_b})
+
+# 🚨 Validation
+if not parsed_a and not parsed_b:
+    st.error("Parsing failed: Empty or invalid config files")
+    st.stop()
 
         changes = compare_configs(parsed_a, parsed_b)
         analysis = impact_analysis(changes)
