@@ -94,7 +94,20 @@ def impact_analysis(changes):
             "impact": impact,
             "risk": risk
         })
+def calculate_risk_score(analysis):
+    score = 0
 
+    for item in analysis:
+        if "Routing" in item["change"]:
+            score += 5
+        elif "ACL" in item["change"]:
+            score += 4
+        elif "Interface" in item["change"]:
+            score += 2
+        elif "VLAN" in item["change"]:
+            score += 3
+
+    return score
     return results
 
 
@@ -102,6 +115,14 @@ def impact_analysis(changes):
 # DECISION
 # -------------------------------
 def final_decision(analysis):
+    score = calculate_risk_score(analysis)
+
+    if score >= 5:
+        return "❌ DO NOT APPLY (CRITICAL RISK)"
+    elif score >= 3:
+        return "⚠️ REVIEW REQUIRED"
+    else:
+        return "✅ SAFE TO APPLY"
     for item in analysis:
         if item["risk"] == "HIGH":
             return "❌ DO NOT APPLY"
