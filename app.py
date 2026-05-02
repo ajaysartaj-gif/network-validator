@@ -14,80 +14,81 @@ def read_file(file):
 # PARSER
 # -------------------------------
 def parse_config(config):
-    if not config or len(config.strip()) == 0:
-        return {
-            "hostname": None,
-            "vlans": [],
-            "interfaces": [],
-            "acls": [],
-            "routing": []
-        }
+    data = {
+        "hostname": None,
+        "vlans": set(),
+        "interfaces": set(),
+        "acls": set(),
+        "routing": set()
+    }
 
-    lines = config.splitlines()
+    for line in config.splitlines():
+        line = line.strip().lower()
 
-    hostname = None
-    vlans = set()
-    interfaces = set()
-    acls = set()
-    routing = set()
-
-    for raw_line in lines:
-        line = raw_line.strip().lower()
-
-        # Skip empty or comments
-        if not line or line.startswith(("!", "#", "//")):
+        if not line or line.startswith(("!", "#")):
             continue
 
-        # HOSTNAME
-        if line.startswith("hostname "):
+        if line.startswith("hostname"):
             parts = line.split()
-            if len(parts) >= 2:
-                hostname = parts[1]
+            if len(parts) > 1:
+                data["hostname"] = parts[1]
 
-        # VLAN
-        elif line.startswith("vlan "):
+        elif line.startswith("vlan"):
             parts = line.split()
-            if len(parts) >= 2 and parts[1].isdigit():
-                vlans.add(parts[1])
+            if len(parts) > 1:
+                data["vlans"].add(parts[1])
 
-        # INTERFACE
-        elif line.startswith("interface "):
+        elif line.startswith("interface"):
             parts = line.split()
-            if len(parts) >= 2:
-                interfaces.add(parts[1])
+            if len(parts) > 1:
+                data["interfaces"].add(parts[1])
 
-        # ACL
         elif line.startswith("access-list"):
-            acls.add(line)
+            data["acls"].add(line)
 
-        # ROUTING
         elif line.startswith("router ospf") or line.startswith("router bgp"):
-            routing.add(line)
+            data["routing"].add(line)
 
-    return {
-        "hostname": hostname,
-        "vlans": sorted(list(vlans)),
-        "interfaces": sorted(list(interfaces)),
-        "acls": sorted(list(acls)),
-        "routing": sorted(list(routing))
-    }
+    return data
+
+
 # -------------------------------
-# COMPARE
+# COMPARE CONFIGS
 # -------------------------------
 def compare_configs(c1, c2):
     changes = []
 
-    changes += [f"VLAN {v} removed" for v in set(c1["vlans"]) - set(c2["vlans"])]
-    changes += [f"VLAN {v} added" for v in set(c2["vlans"]) - set(c1["vlans"])]
+    # VLAN
+    for v in c1["vlans"]:
+        if v not in c2["vlans"]:
+            changes.append(f"VLAN {v} removed")
+    for v in c2["vlans"]:
+        if v not in c1["vlans"]:
+            changes.append(f"VLAN {v} added")
 
-    changes += [f"Interface {i} removed" for i in set(c1["interfaces"]) - set(c2["interfaces"])]
-    changes += [f"Interface {i} added" for i in set(c2["interfaces"]) - set(c1["interfaces"])]
+    # INTERFACE
+    for i in c1["interfaces"]:
+        if i not in c2["interfaces"]:
+            changes.append(f"Interface {i} removed")
+    for i in c2["interfaces"]:
+        if i not in c1["interfaces"]:
+            changes.append(f"Interface {i} added")
 
-    changes += [f"ACL removed: {a}" for a in set(c1["acls"]) - set(c2["acls"])]
-    changes += [f"ACL added: {a}" for a in set(c2["acls"]) - set(c1["acls"])]
+    # ACL
+    for a in c1["acls"]:
+        if a not in c2["acls"]:
+            changes.append(f"ACL removed: {a}")
+    for a in c2["acls"]:
+        if a not in c1["acls"]:
+            changes.append(f"ACL added: {a}")
 
-    changes += [f"Routing removed: {r}" for r in set(c1["routing"]) - set(c2["routing"])]
-    changes += [f"Routing added: {r}" for r in set(c2["routing"]) - set(c1["routing"])]
+    # ROUTING
+    for r in c1["routing"]:
+        if r not in c2["routing"]:
+            changes.append(f"Routing removed: {r}")
+    for r in c2["routing"]:
+        if r not in c1["routing"]:
+            changes.append(f"Routing added: {r}")
 
     return changes
 
@@ -99,42 +100,25 @@ def impact_analysis(changes):
     results = []
 
     for change in changes:
-
-        if "Routing removed" in change:
+        if "routing removed" in change:
             risk = "HIGH"
-            impact = "Routing removed → Core network connectivity may break"
+            impact = "Routing removed → network connectivity may break"
 
-        elif "ACL removed" in change:
+        elif "acl removed" in change:
             risk = "HIGH"
-            impact = "Security policy removed → Traffic may be unrestricted"
+            impact = "Security rule removed → traffic may be unrestricted"
 
-        elif "Interface removed" in change:
+        elif "interface removed" in change:
             risk = "MEDIUM"
-            impact = "Device connected may lose connectivity"
+            impact = "Connected device may lose connectivity"
 
-        elif "VLAN removed" in change:
+        elif "vlan removed" in change:
             risk = "HIGH"
             impact = "Users in VLAN may lose access"
 
-        elif "Routing added" in change:
-            risk = "MEDIUM"
-            impact = "New routing introduced → Verify neighbors and redistribution"
-
-        elif "ACL added" in change:
-            risk = "MEDIUM"
-            impact = "New security rule applied → Verify traffic impact"
-
-        elif "Interface added" in change:
-            risk = "LOW"
-            impact = "New interface added → Check configuration"
-
-        elif "VLAN added" in change:
-            risk = "LOW"
-            impact = "New VLAN created → Ensure routing setup"
-
         else:
             risk = "LOW"
-            impact = "Minor change detected"
+            impact = "Minor change"
 
         results.append({
             "change": change,
@@ -152,13 +136,13 @@ def calculate_risk_score(analysis):
     score = 0
 
     for item in analysis:
-        if "Routing" in item["change"]:
+        if "routing" in item["change"]:
             score += 5
-        elif "ACL" in item["change"]:
+        elif "acl" in item["change"]:
             score += 4
-        elif "Interface" in item["change"]:
+        elif "interface" in item["change"]:
             score += 2
-        elif "VLAN" in item["change"]:
+        elif "vlan" in item["change"]:
             score += 3
 
     return score
@@ -192,19 +176,11 @@ if st.button("Analyze"):
         st.error("Please upload both config files")
 
     else:
-       st.write("RAW CONFIG A:", config_a[:3000])
-       st.write("RAW CONFIG B:", config_b[:3000])
+        config_a = read_file(config_a_file)
+        config_b = read_file(config_b_file)
 
-       parsed_a = parse_config(config_a)
-       parsed_b = parse_config(config_b)
-
-       # 🔍 Controlled debug (only for you)
-       st.json({"CONFIG_A": parsed_a, "CONFIG_B": parsed_b})
-
-# 🚨 Validation
-if not parsed_a and not parsed_b:
-    st.error("Parsing failed: Empty or invalid config files")
-    st.stop()
+        parsed_a = parse_config(config_a)
+        parsed_b = parse_config(config_b)
 
         changes = compare_configs(parsed_a, parsed_b)
         analysis = impact_analysis(changes)
