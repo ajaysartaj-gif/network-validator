@@ -22,7 +22,7 @@ def parse_config(config):
     routing = set()
 
     for line in lines:
-        line = line.strip().lower()   # ✅ normalize
+        line = line.strip().lower()
 
         if not line or line.startswith("!"):
             continue
@@ -55,9 +55,6 @@ def parse_config(config):
         "acls": list(acls),
         "routing": list(routing)
     }
-    st.write("DEBUG PARSED A:", parsed_a)
-st.write("DEBUG PARSED B:", parsed_b)
-
 # -------------------------------
 # COMPARE
 # -------------------------------
@@ -184,6 +181,8 @@ if st.button("Analyze"):
 
         parsed_a = parse_config(config_a)
         parsed_b = parse_config(config_b)
+        st.write("DEBUG A:", parsed_a)
+st.write("DEBUG B:", parsed_b)
 
         changes = compare_configs(parsed_a, parsed_b)
         analysis = impact_analysis(changes)
