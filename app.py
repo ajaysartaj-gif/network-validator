@@ -16,39 +16,45 @@ def read_file(file):
 def parse_config(config):
     lines = config.split("\n")
     hostname = None
-    vlans = []
-    interfaces = []
-    acls = []
-    routing = []
+    vlans = set()
+    interfaces = set()
+    acls = set()
+    routing = set()
 
     for line in lines:
-        line = line.strip()
+        line = line.strip().lower()   # ✅ normalize
+
+        if not line or line.startswith("!"):
+            continue
 
         if line.startswith("hostname"):
-            hostname = line.split()[1]
-
-        if line.startswith("vlan"):
             parts = line.split()
             if len(parts) > 1:
-                vlans.append(parts[1])
+                hostname = parts[1]
 
-        if line.startswith("interface"):
-            interfaces.append(line.split()[1])
+        elif line.startswith("vlan"):
+            parts = line.split()
+            if len(parts) > 1:
+                vlans.add(parts[1])
 
-        if line.startswith("access-list"):
-            acls.append(line)
+        elif line.startswith("interface"):
+            parts = line.split()
+            if len(parts) > 1:
+                interfaces.add(parts[1])
 
-        if line.startswith("router ospf") or line.startswith("router bgp"):
-            routing.append(line)
+        elif line.startswith("access-list"):
+            acls.add(line)
+
+        elif line.startswith("router ospf") or line.startswith("router bgp"):
+            routing.add(line)
 
     return {
         "hostname": hostname,
-        "vlans": vlans,
-        "interfaces": interfaces,
-        "acls": acls,
-        "routing": routing
+        "vlans": list(vlans),
+        "interfaces": list(interfaces),
+        "acls": list(acls),
+        "routing": list(routing)
     }
-
 
 # -------------------------------
 # COMPARE
