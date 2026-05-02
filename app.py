@@ -199,7 +199,6 @@ if st.button("Analyze"):
        parsed_b = parse_config(config_b)
 
        # 🔍 Controlled debug (only for you)
-       with st.expander("DEBUG (Parser Output)"):
        st.json({"CONFIG_A": parsed_a, "CONFIG_B": parsed_b})
 
 # 🚨 Validation
