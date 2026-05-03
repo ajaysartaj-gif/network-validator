@@ -183,11 +183,19 @@ def impact_analysis(changes):
                 confidence = "HIGH"
                 break
 
-        results.append({
-            "change": change,
-            "impact": impact,
-            "risk": risk,
-            "confidence": confidence
+        confidence_reason = (
+    "Seen in historical changes before"
+    if confidence == "HIGH"
+    else "New/unseen change pattern"
+)
+
+    results.append({
+        "change": change,
+        "impact": impact,
+        "risk": risk,
+        "confidence": confidence,
+        "confidence_reason": confidence_reason
+    })
         })
 
     return results
@@ -324,6 +332,7 @@ if st.button("Analyze"):
         parsed_b = parse_config(config_b)
 
         changes = compare_configs(parsed_a, parsed_b)
+        changes = sorted(changes)
         analysis = impact_analysis(changes)
         decision = final_decision(analysis)
 
@@ -343,9 +352,10 @@ if st.button("Analyze"):
 
         st.subheader("📊 Impact Analysis")
         for a in analysis:
-            st.write(
-                f"{a['change']} → {a['impact']} "
-                f"(Risk: {a['risk']}, Confidence: {a['confidence']})"
+        st.write(
+            f"{a['change']} → {a['impact']} "
+            f"(Risk: {a['risk']}, Confidence: {a['confidence']} - {a['confidence_reason']})"
+    )
             )
 
         st.subheader("🚨 Final Decision")
@@ -353,4 +363,4 @@ if st.button("Analyze"):
 
         st.subheader("🤖 AI Change Review")
         ai_text = generate_ai_recommendation(analysis, decision, ai_model)
-        st.write(ai_text)
+        st.markdown(ai_text)
