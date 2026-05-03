@@ -185,6 +185,12 @@ def impact_analysis(changes):
 confidence = "LOW"
 
 for past in history:
+    if past["change"].lower() == change.lower():
+        confidence = "HIGH"
+        break
+confidence = "LOW"
+
+for past in history:
     if past["change"] == change:
         confidence = "HIGH"
 
@@ -291,11 +297,18 @@ if st.button("Analyze"):
 history = load_history()
 
 for a in analysis:
-    history.append({
+    history = load_history()
+
+for a in analysis:
+    entry = {
         "change": a["change"],
         "risk": a["risk"]
-    })
+    }
 
+    if entry not in history:   # جلوگیری duplicate
+        history.append(entry)
+
+save_history(history)
 save_history(history)
 
         # -------------------------------
