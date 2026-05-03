@@ -211,6 +211,9 @@ def final_decision(analysis):
 # -------------------------------
 # UI
 # -------------------------------
+# -------------------------------
+# UI
+# -------------------------------
 st.title("🚀 Network Pre-Change Validator")
 
 st.subheader("📥 Input Options")
@@ -226,7 +229,6 @@ with col2:
     config_b_file = st.file_uploader("Or Upload Proposed Config")
 
 def get_config(text, file):
-    # Priority: pasted text → file → empty
     if text and text.strip():
         return text
     elif file is not None:
@@ -241,42 +243,18 @@ if st.button("Analyze"):
 
     if not config_a or not config_b:
         st.error("Provide both configs (paste or upload)")
+
     else:
         parsed_a = parse_config(config_a)
         parsed_b = parse_config(config_b)
 
         changes = compare_configs(parsed_a, parsed_b)
-        st.subheader("📊 Impact Analysis")
+        analysis = impact_analysis(changes)
+        decision = final_decision(analysis)
 
-high = [a for a in analysis if a["risk"] == "HIGH"]
-medium = [a for a in analysis if a["risk"] == "MEDIUM"]
-low = [a for a in analysis if a["risk"] == "LOW"]
-
-if high:
-    st.error("🔴 HIGH RISK")
-    for a in high:
-        st.write(f"{a['change']} → {a['impact']}")
-
-if medium:
-    st.warning("🟡 MEDIUM RISK")
-    for a in medium:
-        st.write(f"{a['change']} → {a['impact']}")
-
-if low:
-    st.success("🟢 LOW RISK")
-    for a in low:
-        st.write(f"{a['change']} → {a['impact']}")
-
-# TABLE OUTPUT
-import pandas as pd
-
-st.subheader("📋 Structured Output")
-df = pd.DataFrame(analysis)
-st.dataframe(df)
-
-# FINAL DECISION
-st.subheader("🚨 Final Decision")
-st.write(decision)
+        # -------------------------------
+        # CHANGES
+        # -------------------------------
         st.subheader("🔍 Changes Detected")
         if not changes:
             st.write("No changes detected")
@@ -284,28 +262,40 @@ st.write(decision)
             for c in changes:
                 st.write("-", c)
 
+        # -------------------------------
+        # IMPACT GROUPING
+        # -------------------------------
         st.subheader("📊 Impact Analysis")
 
-high = [a for a in analysis if a["risk"] == "HIGH"]
-medium = [a for a in analysis if a["risk"] == "MEDIUM"]
-low = [a for a in analysis if a["risk"] == "LOW"]
+        high = [a for a in analysis if a["risk"] == "HIGH"]
+        medium = [a for a in analysis if a["risk"] == "MEDIUM"]
+        low = [a for a in analysis if a["risk"] == "LOW"]
 
-if high:
-    st.error("🔴 HIGH RISK")
-    for a in high:
-        st.write(f"{a['change']} → {a['impact']}")
+        if high:
+            st.error("🔴 HIGH RISK")
+            for a in high:
+                st.write(f"{a['change']} → {a['impact']}")
 
-if medium:
-    st.warning("🟡 MEDIUM RISK")
-    for a in medium:
-        st.write(f"{a['change']} → {a['impact']}")
+        if medium:
+            st.warning("🟡 MEDIUM RISK")
+            for a in medium:
+                st.write(f"{a['change']} → {a['impact']}")
 
-if low:
-    st.success("🟢 LOW RISK")
-    for a in low:
-        st.write(f"{a['change']} → {a['impact']}")
+        if low:
+            st.success("🟢 LOW RISK")
+            for a in low:
+                st.write(f"{a['change']} → {a['impact']}")
+
+        # -------------------------------
+        # TABLE OUTPUT
+        # -------------------------------
         import pandas as pd
+        st.subheader("📋 Structured Output")
+        df = pd.DataFrame(analysis)
+        st.dataframe(df)
 
-st.subheader("📋 Structured Output")
-df = pd.DataFrame(analysis)
-st.dataframe(df)
+        # -------------------------------
+        # FINAL DECISION
+        # -------------------------------
+        st.subheader("🚨 Final Decision")
+        st.write(decision)
