@@ -141,9 +141,14 @@ def compare_configs(c1, c2):
 def impact_analysis(changes):
     results = []
 
+    history = load_history()
+
     for change in changes:
         c = change.lower()
 
+        # -------------------------------
+        # RISK LOGIC
+        # -------------------------------
         if "routing removed" in c:
             risk = "HIGH"
             impact = "Routing removed → network connectivity may break"
@@ -180,28 +185,28 @@ def impact_analysis(changes):
             risk = "LOW"
             impact = "Minor change"
 
-        history = load_history()
+        # -------------------------------
+        # AI LEARNING (CONFIDENCE)
+        # -------------------------------
+        confidence = "LOW"
 
-confidence = "LOW"
+        for past in history:
+            if past["change"].lower() == change.lower():
+                confidence = "HIGH"
+                break
 
-for past in history:
-    if past["change"].lower() == change.lower():
-        confidence = "HIGH"
-        break
-confidence = "LOW"
+        # -------------------------------
+        # APPEND RESULT
+        # -------------------------------
+        results.append({
+            "change": change,
+            "impact": impact,
+            "risk": risk,
+            "confidence": confidence
+        })
 
-for past in history:
-    if past["change"] == change:
-        confidence = "HIGH"
-
-results.append({
-    "change": change,
-    "impact": impact,
-    "risk": risk,
-    "confidence": confidence
-})
     return results
-    # -------------------------------
+# -------------------------------
 # RISK SCORE
 # -------------------------------
 def calculate_risk_score(analysis):
