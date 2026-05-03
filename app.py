@@ -195,7 +195,7 @@ def impact_analysis(changes):
         "risk": risk,
         "confidence": confidence,
         "confidence_reason": confidence_reason
-    })
+    
         })
 
     return results
