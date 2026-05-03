@@ -53,9 +53,7 @@ def parse_config(config):
         if not line or line.startswith(("!", "#")):
             continue
 
-        # -------------------------
         # CISCO
-        # -------------------------
         if line.startswith("hostname"):
             parts = line.split()
             if len(parts) > 1:
@@ -77,9 +75,7 @@ def parse_config(config):
         elif line.startswith("router ospf") or line.startswith("router bgp"):
             data["routing"].add(line)
 
-        # -------------------------
         # JUNIPER
-        # -------------------------
         elif line.startswith("set system host-name"):
             parts = line.split()
             data["hostname"] = parts[-1]
@@ -105,7 +101,6 @@ def parse_config(config):
 def compare_configs(c1, c2):
     changes = []
 
-    # VLAN
     for v in c1["vlans"]:
         if v not in c2["vlans"]:
             changes.append(f"VLAN {v} removed")
@@ -113,7 +108,6 @@ def compare_configs(c1, c2):
         if v not in c1["vlans"]:
             changes.append(f"VLAN {v} added")
 
-    # INTERFACE
     for i in c1["interfaces"]:
         if i not in c2["interfaces"]:
             changes.append(f"Interface {i} removed")
@@ -121,7 +115,6 @@ def compare_configs(c1, c2):
         if i not in c1["interfaces"]:
             changes.append(f"Interface {i} added")
 
-    # ACL
     for a in c1["acls"]:
         if a not in c2["acls"]:
             changes.append(f"ACL removed: {a}")
@@ -129,7 +122,6 @@ def compare_configs(c1, c2):
         if a not in c1["acls"]:
             changes.append(f"ACL added: {a}")
 
-    # ROUTING
     for r in c1["routing"]:
         if r not in c2["routing"]:
             changes.append(f"Routing removed: {r}")
@@ -153,35 +145,27 @@ def impact_analysis(changes):
         if "routing" in c and "removed" in c:
             risk = "HIGH"
             impact = "Routing removed → network connectivity may break"
-
         elif "acl" in c and "removed" in c:
             risk = "HIGH"
             impact = "Security rule removed → traffic may be unrestricted"
-
         elif "interface" in c and "removed" in c:
             risk = "MEDIUM"
             impact = "Connected device may lose connectivity"
-
         elif "vlan" in c and "removed" in c:
             risk = "HIGH"
             impact = "Users in VLAN may lose access"
-
         elif "routing" in c and "added" in c:
             risk = "MEDIUM"
             impact = "New routing introduced → verify neighbors"
-
         elif "acl" in c and "added" in c:
             risk = "MEDIUM"
             impact = "New security rule applied"
-
         elif "interface" in c and "added" in c:
             risk = "LOW"
             impact = "New interface added"
-
         elif "vlan" in c and "added" in c:
             risk = "LOW"
             impact = "New VLAN created"
-
         else:
             risk = "LOW"
             impact = "Minor change"
@@ -221,20 +205,17 @@ def final_decision(analysis):
 # AI REVIEW (OPENAI)
 # -------------------------------
 def generate_ai_recommendation(analysis, decision, model="gpt-4.1-mini"):
-    api_key = os.getenv("OPENAI_API_KEY")
+    # supports both Streamlit Cloud secrets and local env var
+    api_key = st.secrets.get("API_Key_XX") or st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
     if not api_key:
-        return "⚠️ OPENAI_API_KEY not found. Add it in environment variables."
+        return ("Api_key")
 
     client = OpenAI(api_key=api_key)
 
-    summary_lines = []
-    for item in analysis:
-        summary_lines.append(
-            f"- {item['change']} | Risk={item['risk']} | Impact={item['impact']}"
-        )
-
-    if not summary_lines:
-        summary_lines = ["- No config changes detected"]
+    summary_lines = [
+        f"- {item['change']} | Risk={item['risk']} | Impact={item['impact']}"
+        for item in analysis
+    ] or ["- No config changes detected"]
 
     prompt = (
         "You are a senior network change reviewer.\n"
@@ -253,7 +234,6 @@ def generate_ai_recommendation(analysis, decision, model="gpt-4.1-mini"):
         input=prompt,
         max_output_tokens=400
     )
-
     return response.output_text
 
 
@@ -273,7 +253,6 @@ with col2:
     config_b_text = st.text_area("Paste Proposed Config (optional)", height=300)
     config_b_file = st.file_uploader("Or Upload Proposed Config")
 
-# AI model selector
 ai_model = st.text_input("AI Model", value="gpt-4.1-mini")
 
 def get_config(text, file):
@@ -285,13 +264,11 @@ def get_config(text, file):
         return ""
 
 if st.button("Analyze"):
-
     config_a = get_config(config_a_text, config_a_file)
     config_b = get_config(config_b_text, config_b_file)
 
     if not config_a or not config_b:
         st.error("Provide both configs (paste or upload)")
-
     else:
         parsed_a = parse_config(config_a)
         parsed_b = parse_config(config_b)
@@ -300,9 +277,6 @@ if st.button("Analyze"):
         analysis = impact_analysis(changes)
         decision = final_decision(analysis)
 
-        # -------------------------------
-        # CHANGES
-        # -------------------------------
         st.subheader("🔍 Changes Detected")
         if not changes:
             st.write("No changes detected")
@@ -310,41 +284,20 @@ if st.button("Analyze"):
             for c in changes:
                 st.write("-", c)
 
-        # -------------------------------
-        # SAVE HISTORY
-        # -------------------------------
         history = load_history()
-
         for a in analysis:
-            entry = {
-                "change": a["change"],
-                "risk": a["risk"]
-            }
-
+            entry = {"change": a["change"], "risk": a["risk"]}
             if entry not in history:
                 history.append(entry)
-
         save_history(history)
 
-        # -------------------------------
-        # IMPACT GROUPING
-        # -------------------------------
         st.subheader("📊 Impact Analysis")
         for a in analysis:
-            st.write(
-                f"{a['change']} → {a['impact']} "
-                f"(Risk: {a['risk']}, Confidence: {a['confidence']})"
-            )
+            st.write(f"{a['change']} → {a['impact']} (Risk: {a['risk']}, Confidence: {a['confidence']})")
 
-        # -------------------------------
-        # FINAL DECISION
-        # -------------------------------
         st.subheader("🚨 Final Decision")
         st.write(decision)
 
-        # -------------------------------
-        # AI CHANGE REVIEW
-        # -------------------------------
         st.subheader("🤖 AI Change Review")
         try:
             ai_text = generate_ai_recommendation(analysis, decision, ai_model)
