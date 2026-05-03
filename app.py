@@ -1,3 +1,5 @@
+from openai import OpenAI
+import os
 import streamlit as st
 
 # -------------------------------
@@ -234,7 +236,44 @@ def final_decision(analysis):
     else:
         return "✅ SAFE TO APPLY"
 
+# -------------------------------
+# AI REVIEW (OPENAI)
+# -------------------------------
+def generate_ai_recommendation(analysis, decision, model="gpt-4.1-mini"):
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return "⚠️ OPENAI_API_KEY not found. Add it in environment variables."
 
+    client = OpenAI(api_key=api_key)
+
+    summary_lines = []
+    for item in analysis:
+        summary_lines.append(
+            f"- {item['change']} | Risk={item['risk']} | Impact={item['impact']}"
+        )
+
+    if not summary_lines:
+        summary_lines = ["- No config changes detected"]
+
+    prompt = (
+        "You are a senior network change reviewer.\n"
+        "Given these config changes:\n"
+        + "\n".join(summary_lines)
+        + f"\n\nTool decision: {decision}\n\n"
+        "Return:\n"
+        "1) Short risk summary\n"
+        "2) Top 3 validation checks/commands\n"
+        "3) Rollback plan bullets\n"
+        "Keep it practical and concise."
+    )
+
+    response = client.responses.create(
+        model=model,
+        input=prompt,
+        max_output_tokens=400
+    )
+
+    return response.output_text
 # -------------------------------
 # UI
 # -------------------------------
@@ -259,7 +298,7 @@ def get_config(text, file):
         return read_file(file)
     else:
         return ""
-
+ai_model = st.text_input("AI Model", value="gpt-4.1-mini")
 if st.button("Analyze"):
 
     config_a = get_config(config_a_text, config_a_file)
@@ -315,3 +354,9 @@ if st.button("Analyze"):
         # -------------------------------
         st.subheader("🚨 Final Decision")
         st.write(decision)
+        st.subheader("🤖 AI Change Review")
+try:
+    ai_text = generate_ai_recommendation(analysis, decision, ai_model)
+    st.write(ai_text)
+except Exception as e:
+    st.warning(f"AI review unavailable: {e}")
