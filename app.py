@@ -167,8 +167,7 @@ st.subheader("📋 Structured Output")
 
 df = pd.DataFrame(analysis)
 st.dataframe(df)
-
-    return results
+return results
 # -------------------------------
 # RISK SCORE
 # -------------------------------
