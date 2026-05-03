@@ -13,6 +13,7 @@ def read_file(file):
 # -------------------------------
 # PARSER
 # -------------------------------
+
 def parse_config(config):
     data = {
         "hostname": None,
@@ -23,11 +24,15 @@ def parse_config(config):
     }
 
     for line in config.splitlines():
-        line = line.strip().lower()
+        raw = line.strip()
+        line = raw.lower()
 
         if not line or line.startswith(("!", "#")):
             continue
 
+        # -------------------------
+        # CISCO
+        # -------------------------
         if line.startswith("hostname"):
             parts = line.split()
             if len(parts) > 1:
@@ -49,8 +54,27 @@ def parse_config(config):
         elif line.startswith("router ospf") or line.startswith("router bgp"):
             data["routing"].add(line)
 
-    return data
+        # -------------------------
+        # JUNIPER
+        # -------------------------
+        elif line.startswith("set system host-name"):
+            parts = line.split()
+            data["hostname"] = parts[-1]
 
+        elif "set interfaces" in line:
+            parts = line.split()
+            # Example: set interfaces ge-0/0/1 unit 0 ...
+            if len(parts) > 2:
+                data["interfaces"].add(parts[2])
+
+        elif "set vlans" in line and "vlan-id" in line:
+            parts = line.split()
+            data["vlans"].add(parts[-1])
+
+        elif "set protocols ospf" in line or "set protocols bgp" in line:
+            data["routing"].add(line)
+
+    return data
 
 # -------------------------------
 # COMPARE CONFIGS
@@ -142,7 +166,15 @@ def impact_analysis(changes):
             "change": change,
             "impact": impact,
             "risk": risk
-        })
+        }}
+
+
+import pandas as pd
+
+st.subheader("📋 Structured Output")
+
+df = pd.DataFrame(analysis)
+st.dataframe(df)
 
     return results
 # -------------------------------
