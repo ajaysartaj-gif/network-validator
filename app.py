@@ -167,6 +167,11 @@ st.subheader("📋 Structured Output")
 
 df = pd.DataFrame(analysis)
 st.dataframe(df)
+results.append({
+            "change": change,
+            "impact": impact,
+            "risk": risk
+        }}
 return results
 # -------------------------------
 # RISK SCORE
