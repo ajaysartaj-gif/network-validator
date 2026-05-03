@@ -46,7 +46,7 @@ def parse_config(config):
         "vlans": set(),
         "interfaces": set(),
         "acls": set(),
-        "routing": set(),
+        "routing": set()
     }
 
     for line in config.splitlines():
@@ -152,35 +152,27 @@ def impact_analysis(changes):
         if "routing" in c and "removed" in c:
             risk = "HIGH"
             impact = "Routing removed → network connectivity may break"
-
         elif "acl" in c and "removed" in c:
             risk = "HIGH"
             impact = "Security rule removed → traffic may be unrestricted"
-
         elif "interface" in c and "removed" in c:
             risk = "MEDIUM"
             impact = "Connected device may lose connectivity"
-
         elif "vlan" in c and "removed" in c:
             risk = "HIGH"
             impact = "Users in VLAN may lose access"
-
         elif "routing" in c and "added" in c:
             risk = "MEDIUM"
             impact = "New routing introduced → verify neighbors"
-
         elif "acl" in c and "added" in c:
             risk = "MEDIUM"
             impact = "New security rule applied"
-
         elif "interface" in c and "added" in c:
             risk = "LOW"
             impact = "New interface added"
-
         elif "vlan" in c and "added" in c:
             risk = "LOW"
             impact = "New VLAN created"
-
         else:
             risk = "LOW"
             impact = "Minor change"
@@ -191,21 +183,12 @@ def impact_analysis(changes):
                 confidence = "HIGH"
                 break
 
-        confidence_reason = (
-            "Seen in historical changes before"
-            if confidence == "HIGH"
-            else "New/unseen change pattern"
-        )
-
-        results.append(
-            {
-                "change": change,
-                "impact": impact,
-                "risk": risk,
-                "confidence": confidence,
-                "confidence_reason": confidence_reason,
-            }
-        )
+        results.append({
+            "change": change,
+            "impact": impact,
+            "risk": risk,
+            "confidence": confidence
+        })
 
     return results
 
@@ -219,9 +202,10 @@ def final_decision(analysis):
 
     if has_high:
         return "❌ DO NOT APPLY (CRITICAL RISK)"
-    if has_medium:
+    elif has_medium:
         return "⚠️ REVIEW REQUIRED"
-    return "✅ SAFE TO APPLY"
+    else:
+        return "✅ SAFE TO APPLY"
 
 
 # -------------------------------
@@ -246,29 +230,25 @@ def generate_fallback_review(analysis, decision):
         f"- LOW risk changes: {len(low)}",
         f"- Final Decision: {decision}",
         "",
-        "#### Top checks",
+        "Top checks:",
         "- Verify VLAN gateway reachability and host connectivity.",
         "- Validate routing neighbors/routes and path changes.",
         "- Confirm ACL behavior against intended traffic.",
         "",
-        "#### Rollback",
+        "Rollback:",
         "- Keep previous config snapshot ready.",
         "- Revert high-risk removals first (routing/ACL/VLAN).",
-        "- Re-run validation after rollback.",
+        "- Re-run validation after rollback."
     ]
     return "\n".join(lines)
 
 
 # -------------------------------
-# AI REVIEW (OPENROUTER / OPENAI-COMPATIBLE)
+# AI REVIEW (OPENROUTER FREE)
 # -------------------------------
 def generate_ai_recommendation(analysis, decision, model="openrouter/free"):
     api_key = st.secrets.get("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_API_KEY")
-    base_url = (
-        st.secrets.get("OPENROUTER_BASE_URL")
-        or os.getenv("OPENROUTER_BASE_URL")
-        or "https://openrouter.ai/api/v1"
-    )
+    base_url = st.secrets.get("OPENROUTER_BASE_URL") or os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1"
 
     if not api_key:
         return "⚠️ OPENROUTER_API_KEY not found. Add it in Streamlit Secrets."
@@ -286,34 +266,24 @@ def generate_ai_recommendation(analysis, decision, model="openrouter/free"):
         "3) Rollback plan bullets\n"
         "Keep it concise and practical.\n\n"
         f"Tool decision: {decision}\n"
-        "Changes:\n"
-        + "\n".join(summary_lines)
+        "Changes:\n" + "\n".join(summary_lines)
     )
 
     try:
-    client = OpenAI(api_key=api_key, base_url=base_url)
-    resp = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.2,
-        max_tokens=400,
-    )
+        client = OpenAI(api_key=api_key, base_url=base_url)
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+            max_tokens=400
+        )
+        return resp.choices[0].message.content
+    except Exception as e:
+        return (
+            f"⚠️ Free model unavailable/rate-limited: {e}\n\n"
+            + generate_fallback_review(analysis, decision)
+        )
 
-    # Safe extraction
-    content = None
-    if resp and getattr(resp, "choices", None):
-        msg = resp.choices[0].message
-        if msg:
-            content = getattr(msg, "content", None)
-
-    if content and str(content).strip():
-        return content
-
-    # fallback if provider gives empty content
-    return "⚠️ AI returned empty response. Try another model or rerun."
-
-except Exception as e:
-    return f"⚠️ AI review unavailable: {e}\n\n" + generate_fallback_review(analysis, decision)
 
 # -------------------------------
 # UI
@@ -337,9 +307,10 @@ ai_model = st.text_input("AI model", value="openrouter/free")
 def get_config(text, file):
     if text and text.strip():
         return text
-    if file is not None:
+    elif file is not None:
         return read_file(file)
-    return ""
+    else:
+        return ""
 
 
 if st.button("Analyze"):
@@ -353,8 +324,6 @@ if st.button("Analyze"):
         parsed_b = parse_config(config_b)
 
         changes = compare_configs(parsed_a, parsed_b)
-        changes = sorted(changes)  # stable order
-
         analysis = impact_analysis(changes)
         decision = final_decision(analysis)
 
@@ -364,8 +333,6 @@ if st.button("Analyze"):
         else:
             for c in changes:
                 st.write("-", c)
-
-        st.divider()
 
         history = load_history()
         for a in analysis:
@@ -378,16 +345,12 @@ if st.button("Analyze"):
         for a in analysis:
             st.write(
                 f"{a['change']} → {a['impact']} "
-                f"(Risk: {a['risk']}, Confidence: {a['confidence']} - {a['confidence_reason']})"
+                f"(Risk: {a['risk']}, Confidence: {a['confidence']})"
             )
-
-        st.divider()
 
         st.subheader("🚨 Final Decision")
         st.write(decision)
 
-        st.divider()
-
         st.subheader("🤖 AI Change Review")
         ai_text = generate_ai_recommendation(analysis, decision, ai_model)
-        st.markdown(ai_text)
+        st.write(ai_text)
