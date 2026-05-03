@@ -167,8 +167,6 @@ def impact_analysis(changes):
             "impact": impact,
             "risk": risk
         }}
-
-
 import pandas as pd
 
 st.subheader("📋 Structured Output")
