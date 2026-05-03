@@ -1,13 +1,14 @@
-import streamlit as st
 import json
 import os
-from openai import OpenAI
+import requests
+import streamlit as st
+
+HISTORY_FILE = "change_history.json"
+
 
 # -------------------------------
 # HISTORY (AI MEMORY)
 # -------------------------------
-HISTORY_FILE = "change_history.json"
-
 def load_history():
     if not os.path.exists(HISTORY_FILE):
         with open(HISTORY_FILE, "w", encoding="utf-8") as f:
@@ -20,9 +21,11 @@ def load_history():
     except Exception:
         return []
 
+
 def save_history(history):
     with open(HISTORY_FILE, "w", encoding="utf-8") as f:
         json.dump(history, f, indent=2)
+
 
 # -------------------------------
 # FILE READER
@@ -43,7 +46,7 @@ def parse_config(config):
         "vlans": set(),
         "interfaces": set(),
         "acls": set(),
-        "routing": set()
+        "routing": set(),
     }
 
     for line in config.splitlines():
@@ -176,12 +179,14 @@ def impact_analysis(changes):
                 confidence = "HIGH"
                 break
 
-        results.append({
-            "change": change,
-            "impact": impact,
-            "risk": risk,
-            "confidence": confidence
-        })
+        results.append(
+            {
+                "change": change,
+                "impact": impact,
+                "risk": risk,
+                "confidence": confidence,
+            }
+        )
 
     return results
 
@@ -195,27 +200,18 @@ def final_decision(analysis):
 
     if has_high:
         return "❌ DO NOT APPLY (CRITICAL RISK)"
-    elif has_medium:
+    if has_medium:
         return "⚠️ REVIEW REQUIRED"
-    else:
-        return "✅ SAFE TO APPLY"
+    return "✅ SAFE TO APPLY"
 
 
 # -------------------------------
-# AI REVIEW (OPENAI)
+# OLLAMA AI REVIEW
 # -------------------------------
-def generate_ai_recommendation(analysis, decision, model="gpt-4.1-mini"):
-    # Supports Streamlit Cloud secrets + local env var
-    api_key = (
-        st.secrets.get("API_Key_XX")
-        or st.secrets.get("OPENAI_API_KEY")
-        or os.getenv("OPENAI_API_KEY")
-    )
-
-    if not api_key:
-        return "⚠️ API key not found. Add API_Key_XX or OPENAI_API_KEY in Streamlit Secrets."
-
-    client = OpenAI(api_key=api_key)
+def generate_ai_recommendation_ollama(analysis, decision, model="llama3.2"):
+    # For local run: default localhost
+    # For Streamlit Cloud: set in secrets -> OLLAMA_BASE_URL = "https://your-ollama-host"
+    ollama_base_url = st.secrets.get("OLLAMA_BASE_URL") or os.getenv("OLLAMA_BASE_URL") or "http://127.0.0.1:11434"
 
     summary_lines = [
         f"- {item['change']} | Risk={item['risk']} | Impact={item['impact']}"
@@ -224,71 +220,102 @@ def generate_ai_recommendation(analysis, decision, model="gpt-4.1-mini"):
 
     prompt = (
         "You are a senior network change reviewer.\n"
-        "Given these config changes:\n"
-        + "\n".join(summary_lines)
-        + f"\n\nTool decision: {decision}\n\n"
-        "Return:\n"
+        "Given these config changes, provide:\n"
         "1) Short risk summary\n"
-        "2) Top 3 validation checks/commands\n"
+        "2) Top 3 verification checks/commands\n"
         "3) Rollback plan bullets\n"
-        "Keep it practical and concise."
+        "Be concise and practical.\n\n"
+        f"Tool decision: {decision}\n"
+        "Changes:\n"
+        + "\n".join(summary_lines)
     )
 
-    response = client.responses.create(
-        model=model,
-        input=prompt,
-        max_output_tokens=400,
-    )
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False
+    }
 
-    return response.output_text
+    try:
+        resp = requests.post(
+            f"{ollama_base_url.rstrip('/')}/api/generate",
+            json=payload,
+            timeout=90
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("response", "No AI response returned.")
+    except requests.exceptions.RequestException as e:
+        return f"⚠️ Ollama connection failed: {e}"
+
+
 # -------------------------------
 # UI
 # -------------------------------
-def generate_ai_recommendation(analysis, decision, model="free-rule-engine"):
-    if not analysis:
-        return (
-            "### AI Review (Free Mode)\n"
-            "- No config changes detected.\n"
-            "- Recommendation: Safe to proceed with standard post-change checks."
-        )
+st.title("🚀 Network Pre-Change Validator (Ollama Edition)")
+st.subheader("📥 Input Options")
 
-    high = [a for a in analysis if a["risk"] == "HIGH"]
-    medium = [a for a in analysis if a["risk"] == "MEDIUM"]
-    low = [a for a in analysis if a["risk"] == "LOW"]
+col1, col2 = st.columns(2)
 
-    risk_summary = []
-    if high:
-        risk_summary.append(f"- HIGH risk changes: {len(high)}")
-    if medium:
-        risk_summary.append(f"- MEDIUM risk changes: {len(medium)}")
-    if low:
-        risk_summary.append(f"- LOW risk changes: {len(low)}")
-    if not risk_summary:
-        risk_summary.append("- No risk items found")
+with col1:
+    config_a_text = st.text_area("Paste Current Config (optional)", height=300)
+    config_a_file = st.file_uploader("Or Upload Current Config")
 
-    checks = [
-        "- Verify reachability (ping/traceroute) for critical VLAN gateways.",
-        "- Validate routing neighbors and route table consistency.",
-        "- Confirm ACL hit counts / intended traffic flows after change.",
-    ]
+with col2:
+    config_b_text = st.text_area("Paste Proposed Config (optional)", height=300)
+    config_b_file = st.file_uploader("Or Upload Proposed Config")
 
-    rollback = [
-        "- Keep previous known-good config snapshot.",
-        "- If critical traffic fails, rollback removed routing/ACL/VLAN items first.",
-        "- Re-run validation checks and document incident timeline.",
-    ]
+st.subheader("🤖 AI Settings (Ollama)")
+model = st.selectbox("Model", ["llama3.2", "mistral"], index=0)
+st.caption("If deployed online, set OLLAMA_BASE_URL in Streamlit Secrets to your Ollama server URL.")
 
-    lines = [
-        "### AI Review (Free Mode)",
-        "#### Risk Summary",
-        *risk_summary,
-        f"- Final Decision: {decision}",
-        "",
-        "#### Top Validation Checks",
-        *checks,
-        "",
-        "#### Rollback Plan",
-        *rollback,
-    ]
 
-    return "\n".join(lines)
+def get_config(text, file):
+    if text and text.strip():
+        return text
+    if file is not None:
+        return read_file(file)
+    return ""
+
+
+if st.button("Analyze"):
+    config_a = get_config(config_a_text, config_a_file)
+    config_b = get_config(config_b_text, config_b_file)
+
+    if not config_a or not config_b:
+        st.error("Provide both configs (paste or upload)")
+    else:
+        parsed_a = parse_config(config_a)
+        parsed_b = parse_config(config_b)
+
+        changes = compare_configs(parsed_a, parsed_b)
+        analysis = impact_analysis(changes)
+        decision = final_decision(analysis)
+
+        st.subheader("🔍 Changes Detected")
+        if not changes:
+            st.write("No changes detected")
+        else:
+            for c in changes:
+                st.write("-", c)
+
+        history = load_history()
+        for a in analysis:
+            entry = {"change": a["change"], "risk": a["risk"]}
+            if entry not in history:
+                history.append(entry)
+        save_history(history)
+
+        st.subheader("📊 Impact Analysis")
+        for a in analysis:
+            st.write(
+                f"{a['change']} → {a['impact']} "
+                f"(Risk: {a['risk']}, Confidence: {a['confidence']})"
+            )
+
+        st.subheader("🚨 Final Decision")
+        st.write(decision)
+
+        st.subheader("🧠 AI Change Review (Ollama)")
+        ai_text = generate_ai_recommendation_ollama(analysis, decision, model=model)
+        st.write(ai_text)
