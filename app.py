@@ -1,10 +1,12 @@
 import streamlit as st
+import json
+import os
+import pandas as pd
 
 # -------------------------------
 # HISTORY (AI MEMORY)
 # -------------------------------
-import json
-import os
+HISTORY_FILE = "change_history.json"
 
 def load_history():
     if os.path.exists(HISTORY_FILE):
@@ -25,11 +27,9 @@ def read_file(file):
     except:
         return str(file.read())
 
-
 # -------------------------------
 # PARSER
 # -------------------------------
-
 def parse_config(config):
     data = {
         "hostname": None,
@@ -40,29 +40,19 @@ def parse_config(config):
     }
 
     for line in config.splitlines():
-        raw = line.strip()
-        line = raw.lower()
+        line = line.strip().lower()
 
         if not line or line.startswith(("!", "#")):
             continue
 
-        # -------------------------
-        # CISCO
-        # -------------------------
         if line.startswith("hostname"):
-            parts = line.split()
-            if len(parts) > 1:
-                data["hostname"] = parts[1]
+            data["hostname"] = line.split()[1]
 
         elif line.startswith("vlan"):
-            parts = line.split()
-            if len(parts) > 1:
-                data["vlans"].add(parts[1])
+            data["vlans"].add(line.split()[1])
 
         elif line.startswith("interface"):
-            parts = line.split()
-            if len(parts) > 1:
-                data["interfaces"].add(parts[1])
+            data["interfaces"].add(line.split()[1])
 
         elif line.startswith("access-list"):
             data["acls"].add(line)
@@ -70,22 +60,11 @@ def parse_config(config):
         elif line.startswith("router ospf") or line.startswith("router bgp"):
             data["routing"].add(line)
 
-        # -------------------------
-        # JUNIPER
-        # -------------------------
-        elif line.startswith("set system host-name"):
-            parts = line.split()
-            data["hostname"] = parts[-1]
-
         elif "set interfaces" in line:
-            parts = line.split()
-            # Example: set interfaces ge-0/0/1 unit 0 ...
-            if len(parts) > 2:
-                data["interfaces"].add(parts[2])
+            data["interfaces"].add(line.split()[2])
 
         elif "set vlans" in line and "vlan-id" in line:
-            parts = line.split()
-            data["vlans"].add(parts[-1])
+            data["vlans"].add(line.split()[-1])
 
         elif "set protocols ospf" in line or "set protocols bgp" in line:
             data["routing"].add(line)
@@ -98,7 +77,6 @@ def parse_config(config):
 def compare_configs(c1, c2):
     changes = []
 
-    # VLAN
     for v in c1["vlans"]:
         if v not in c2["vlans"]:
             changes.append(f"VLAN {v} removed")
@@ -106,7 +84,6 @@ def compare_configs(c1, c2):
         if v not in c1["vlans"]:
             changes.append(f"VLAN {v} added")
 
-    # INTERFACE
     for i in c1["interfaces"]:
         if i not in c2["interfaces"]:
             changes.append(f"Interface {i} removed")
@@ -114,7 +91,6 @@ def compare_configs(c1, c2):
         if i not in c1["interfaces"]:
             changes.append(f"Interface {i} added")
 
-    # ACL
     for a in c1["acls"]:
         if a not in c2["acls"]:
             changes.append(f"ACL removed: {a}")
@@ -122,7 +98,6 @@ def compare_configs(c1, c2):
         if a not in c1["acls"]:
             changes.append(f"ACL added: {a}")
 
-    # ROUTING
     for r in c1["routing"]:
         if r not in c2["routing"]:
             changes.append(f"Routing removed: {r}")
@@ -132,24 +107,16 @@ def compare_configs(c1, c2):
 
     return changes
 
-
-# -------------------------------
-# IMPACT ANALYSIS
-# -------------------------------
 # -------------------------------
 # IMPACT ANALYSIS
 # -------------------------------
 def impact_analysis(changes):
     results = []
-
     history = load_history()
 
     for change in changes:
         c = change.lower()
 
-        # -------------------------------
-        # RISK LOGIC (FIXED)
-        # -------------------------------
         if "routing" in c and "removed" in c:
             risk = "HIGH"
             impact = "Routing removed → network connectivity may break"
@@ -186,19 +153,12 @@ def impact_analysis(changes):
             risk = "LOW"
             impact = "Minor change"
 
-        # -------------------------------
-        # AI LEARNING (CONFIDENCE)
-        # -------------------------------
         confidence = "LOW"
-
         for past in history:
             if past["change"].lower() == change.lower():
                 confidence = "HIGH"
                 break
 
-        # -------------------------------
-        # APPEND RESULT
-        # -------------------------------
         results.append({
             "change": change,
             "impact": impact,
@@ -208,154 +168,54 @@ def impact_analysis(changes):
 
     return results
 
-
-# -------------------------------
-# RISK SCORE (FIXED)
-# -------------------------------
-def calculate_risk_score(analysis):
-    score = 0
-
-    for item in analysis:
-        c = item["change"].lower()
-
-        if "routing" in c:
-            score += 5
-        elif "acl" in c:
-            score += 4
-        elif "interface" in c:
-            score += 2
-        elif "vlan" in c:
-            score += 3
-
-    return score
-
-
 # -------------------------------
 # FINAL DECISION
 # -------------------------------
 def final_decision(analysis):
-
-    has_high = False
-    has_medium = False
-
-    for item in analysis:
-        if item["risk"] == "HIGH":
-            has_high = True
-        elif item["risk"] == "MEDIUM":
-            has_medium = True
-
-    if has_high:
+    if any(a["risk"] == "HIGH" for a in analysis):
         return "❌ DO NOT APPLY (CRITICAL RISK)"
-    elif has_medium:
+    elif any(a["risk"] == "MEDIUM" for a in analysis):
         return "⚠️ REVIEW REQUIRED"
     else:
         return "✅ SAFE TO APPLY"
+
 # -------------------------------
 # UI
 # -------------------------------
 st.title("🚀 Network Pre-Change Validator")
 
-st.subheader("📥 Input Options")
-
 col1, col2 = st.columns(2)
 
 with col1:
-    config_a_text = st.text_area("Paste Current Config (optional)", height=300)
-    config_a_file = st.file_uploader("Or Upload Current Config")
+    config_a_text = st.text_area("Current Config")
 
 with col2:
-    config_b_text = st.text_area("Paste Proposed Config (optional)", height=300)
-    config_b_file = st.file_uploader("Or Upload Proposed Config")
-
-
-def get_config(text, file):
-    if text and text.strip():
-        return text
-    elif file is not None:
-        return read_file(file)
-    else:
-        return ""
-
+    config_b_text = st.text_area("Proposed Config")
 
 if st.button("Analyze"):
 
-    config_a = get_config(config_a_text, config_a_file)
-    config_b = get_config(config_b_text, config_b_file)
+    parsed_a = parse_config(config_a_text)
+    parsed_b = parse_config(config_b_text)
 
-    if not config_a or not config_b:
-        st.error("Provide both configs (paste or upload)")
+    changes = compare_configs(parsed_a, parsed_b)
+    analysis = impact_analysis(changes)
+    decision = final_decision(analysis)
 
-    else:
-        parsed_a = parse_config(config_a)
-        parsed_b = parse_config(config_b)
+    st.subheader("🔍 Changes")
+    for c in changes:
+        st.write("-", c)
 
-        changes = compare_configs(parsed_a, parsed_b)
-        analysis = impact_analysis(changes)
-        decision = final_decision(analysis)
-    import os
-         if os.path.exists("change_history.json"):
-         os.remove("change_history.json")
+    st.subheader("📊 Analysis")
+    for a in analysis:
+        st.write(f"{a['change']} → {a['impact']} ({a['risk']}, Confidence: {a['confidence']})")
 
-        # -------------------------------
-        # CHANGES
-        # -------------------------------
-        st.subheader("🔍 Changes Detected")
-        if not changes:
-            st.write("No changes detected")
-        else:
-            for c in changes:
-                st.write("-", c)
+    st.subheader("🚨 Decision")
+    st.write(decision)
 
-        # -------------------------------
-        # SAVE HISTORY (CLEAN VERSION)
-        # -------------------------------
-        history = load_history()
-
-        for a in analysis:
-            entry = {
-                "change": a["change"],
-                "risk": a["risk"]
-            }
-
-            if entry not in history:
-                history.append(entry)
-
-        save_history(history)
-
-        # -------------------------------
-        # IMPACT GROUPING
-        # -------------------------------
-        st.subheader("📊 Impact Analysis")
-
-        high = [a for a in analysis if a["risk"] == "HIGH"]
-        medium = [a for a in analysis if a["risk"] == "MEDIUM"]
-        low = [a for a in analysis if a["risk"] == "LOW"]
-
-        if high:
-            st.error("🔴 HIGH RISK")
-            for a in high:
-                st.write(f"{a['change']} → {a['impact']} (Confidence: {a['confidence']})")
-
-        if medium:
-            st.warning("🟡 MEDIUM RISK")
-            for a in medium:
-                st.write(f"{a['change']} → {a['impact']} (Confidence: {a['confidence']})")
-
-        if low:
-            st.success("🟢 LOW RISK")
-            for a in low:
-                st.write(f"{a['change']} → {a['impact']} (Confidence: {a['confidence']})")
-
-        # -------------------------------
-        # TABLE OUTPUT
-        # -------------------------------
-        import pandas as pd
-        st.subheader("📋 Structured Output")
-        df = pd.DataFrame(analysis)
-        st.dataframe(df)
-
-        # -------------------------------
-        # FINAL DECISION
-        # -------------------------------
-        st.subheader("🚨 Final Decision")
-        st.write(decision)
+    # SAVE HISTORY
+    history = load_history()
+    for a in analysis:
+        entry = {"change": a["change"], "risk": a["risk"]}
+        if entry not in history:
+            history.append(entry)
+    save_history(history)
