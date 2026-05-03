@@ -138,6 +138,9 @@ def compare_configs(c1, c2):
 # -------------------------------
 # IMPACT ANALYSIS
 # -------------------------------
+# -------------------------------
+# IMPACT ANALYSIS
+# -------------------------------
 def impact_analysis(changes):
     results = []
 
@@ -147,37 +150,37 @@ def impact_analysis(changes):
         c = change.lower()
 
         # -------------------------------
-        # RISK LOGIC
+        # RISK LOGIC (FIXED)
         # -------------------------------
-        if "routing removed" in c:
+        if "routing" in c and "removed" in c:
             risk = "HIGH"
             impact = "Routing removed → network connectivity may break"
 
-        elif "acl removed" in c:
+        elif "acl" in c and "removed" in c:
             risk = "HIGH"
             impact = "Security rule removed → traffic may be unrestricted"
 
-        elif "interface removed" in c:
+        elif "interface" in c and "removed" in c:
             risk = "MEDIUM"
             impact = "Connected device may lose connectivity"
 
-        elif "vlan removed" in c:
+        elif "vlan" in c and "removed" in c:
             risk = "HIGH"
             impact = "Users in VLAN may lose access"
 
-        elif "routing added" in c:
+        elif "routing" in c and "added" in c:
             risk = "MEDIUM"
             impact = "New routing introduced → verify neighbors"
 
-        elif "acl added" in c:
+        elif "acl" in c and "added" in c:
             risk = "MEDIUM"
             impact = "New security rule applied"
 
-        elif "interface added" in c:
+        elif "interface" in c and "added" in c:
             risk = "LOW"
             impact = "New interface added"
 
-        elif "vlan added" in c:
+        elif "vlan" in c and "added" in c:
             risk = "LOW"
             impact = "New VLAN created"
 
@@ -206,20 +209,24 @@ def impact_analysis(changes):
         })
 
     return results
+
+
 # -------------------------------
-# RISK SCORE
+# RISK SCORE (FIXED)
 # -------------------------------
 def calculate_risk_score(analysis):
     score = 0
 
     for item in analysis:
-        if "routing" in item["change"]:
+        c = item["change"].lower()
+
+        if "routing" in c:
             score += 5
-        elif "acl" in item["change"]:
+        elif "acl" in c:
             score += 4
-        elif "interface" in item["change"]:
+        elif "interface" in c:
             score += 2
-        elif "vlan" in item["change"]:
+        elif "vlan" in c:
             score += 3
 
     return score
@@ -245,7 +252,6 @@ def final_decision(analysis):
         return "⚠️ REVIEW REQUIRED"
     else:
         return "✅ SAFE TO APPLY"
-
 # -------------------------------
 # UI
 # -------------------------------
