@@ -244,67 +244,51 @@ def generate_ai_recommendation(analysis, decision, model="gpt-4.1-mini"):
 # -------------------------------
 # UI
 # -------------------------------
-st.title("🚀 Network Pre-Change Validator")
-st.subheader("📥 Input Options")
+def generate_ai_recommendation(analysis, decision, model="free-rule-engine"):
+    if not analysis:
+        return (
+            "### AI Review (Free Mode)\n"
+            "- No config changes detected.\n"
+            "- Recommendation: Safe to proceed with standard post-change checks."
+        )
 
-col1, col2 = st.columns(2)
+    high = [a for a in analysis if a["risk"] == "HIGH"]
+    medium = [a for a in analysis if a["risk"] == "MEDIUM"]
+    low = [a for a in analysis if a["risk"] == "LOW"]
 
-with col1:
-    config_a_text = st.text_area("Paste Current Config (optional)", height=300)
-    config_a_file = st.file_uploader("Or Upload Current Config")
+    risk_summary = []
+    if high:
+        risk_summary.append(f"- HIGH risk changes: {len(high)}")
+    if medium:
+        risk_summary.append(f"- MEDIUM risk changes: {len(medium)}")
+    if low:
+        risk_summary.append(f"- LOW risk changes: {len(low)}")
+    if not risk_summary:
+        risk_summary.append("- No risk items found")
 
-with col2:
-    config_b_text = st.text_area("Paste Proposed Config (optional)", height=300)
-    config_b_file = st.file_uploader("Or Upload Proposed Config")
+    checks = [
+        "- Verify reachability (ping/traceroute) for critical VLAN gateways.",
+        "- Validate routing neighbors and route table consistency.",
+        "- Confirm ACL hit counts / intended traffic flows after change.",
+    ]
 
-ai_model = st.text_input("AI Model", value="gpt-4.1-mini")
+    rollback = [
+        "- Keep previous known-good config snapshot.",
+        "- If critical traffic fails, rollback removed routing/ACL/VLAN items first.",
+        "- Re-run validation checks and document incident timeline.",
+    ]
 
-def get_config(text, file):
-    if text and text.strip():
-        return text
-    elif file is not None:
-        return read_file(file)
-    else:
-        return ""
+    lines = [
+        "### AI Review (Free Mode)",
+        "#### Risk Summary",
+        *risk_summary,
+        f"- Final Decision: {decision}",
+        "",
+        "#### Top Validation Checks",
+        *checks,
+        "",
+        "#### Rollback Plan",
+        *rollback,
+    ]
 
-if st.button("Analyze"):
-    config_a = get_config(config_a_text, config_a_file)
-    config_b = get_config(config_b_text, config_b_file)
-
-    if not config_a or not config_b:
-        st.error("Provide both configs (paste or upload)")
-    else:
-        parsed_a = parse_config(config_a)
-        parsed_b = parse_config(config_b)
-
-        changes = compare_configs(parsed_a, parsed_b)
-        analysis = impact_analysis(changes)
-        decision = final_decision(analysis)
-
-        st.subheader("🔍 Changes Detected")
-        if not changes:
-            st.write("No changes detected")
-        else:
-            for c in changes:
-                st.write("-", c)
-
-        history = load_history()
-        for a in analysis:
-            entry = {"change": a["change"], "risk": a["risk"]}
-            if entry not in history:
-                history.append(entry)
-        save_history(history)
-
-        st.subheader("📊 Impact Analysis")
-        for a in analysis:
-            st.write(f"{a['change']} → {a['impact']} (Risk: {a['risk']}, Confidence: {a['confidence']})")
-
-        st.subheader("🚨 Final Decision")
-        st.write(decision)
-
-        st.subheader("🤖 AI Change Review")
-        try:
-            ai_text = generate_ai_recommendation(analysis, decision, ai_model)
-            st.write(ai_text)
-        except Exception as e:
-            st.warning(f"AI review unavailable: {e}")
+    return "\n".join(lines)
