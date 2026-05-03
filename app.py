@@ -183,11 +183,18 @@ def impact_analysis(changes):
                 confidence = "HIGH"
                 break
 
+        confidence_reason = (
+            "Seen in historical changes before"
+            if confidence == "HIGH"
+            else "New/unseen change pattern"
+        )
+
         results.append({
             "change": change,
             "impact": impact,
             "risk": risk,
-            "confidence": confidence
+            "confidence": confidence,
+            "confidence_reason": confidence_reason
         })
 
     return results
@@ -277,7 +284,13 @@ def generate_ai_recommendation(analysis, decision, model="openrouter/free"):
             temperature=0.2,
             max_tokens=400
         )
-        return resp.choices[0].message.content
+
+        content = resp.choices[0].message.content if resp and resp.choices else None
+        if content and str(content).strip():
+            return content
+
+        return generate_fallback_review(analysis, decision)
+
     except Exception as e:
         return (
             f"⚠️ Free model unavailable/rate-limited: {e}\n\n"
@@ -324,6 +337,7 @@ if st.button("Analyze"):
         parsed_b = parse_config(config_b)
 
         changes = compare_configs(parsed_a, parsed_b)
+        changes = sorted(changes)  # sorted changes
         analysis = impact_analysis(changes)
         decision = final_decision(analysis)
 
@@ -333,6 +347,8 @@ if st.button("Analyze"):
         else:
             for c in changes:
                 st.write("-", c)
+
+        st.divider()
 
         history = load_history()
         for a in analysis:
@@ -345,12 +361,16 @@ if st.button("Analyze"):
         for a in analysis:
             st.write(
                 f"{a['change']} → {a['impact']} "
-                f"(Risk: {a['risk']}, Confidence: {a['confidence']})"
+                f"(Risk: {a['risk']}, Confidence: {a['confidence']} - {a['confidence_reason']})"
             )
+
+        st.divider()
 
         st.subheader("🚨 Final Decision")
         st.write(decision)
 
+        st.divider()
+
         st.subheader("🤖 AI Change Review")
         ai_text = generate_ai_recommendation(analysis, decision, ai_model)
-        st.write(ai_text)
+        st.markdown(ai_text)  # markdown AI output
