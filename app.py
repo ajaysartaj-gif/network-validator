@@ -1,31 +1,27 @@
-from openai import OpenAI
-import os
 import streamlit as st
+import json
+import os
+from openai import OpenAI
 
 # -------------------------------
 # HISTORY (AI MEMORY)
 # -------------------------------
-import json
-import os
 HISTORY_FILE = "change_history.json"
-def load_history():
-    try:
-        if not os.path.exists(HISTORY_FILE):
-            return []
 
-        with open(HISTORY_FILE, "r") as f:
-            return json.load(f)
-    except:
+def load_history():
+    if not os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+            json.dump([], f)
         return []
 
     try:
-        with open(HISTORY_FILE, "r") as f:
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    except:
+    except Exception:
         return []
 
 def save_history(history):
-    with open(HISTORY_FILE, "w") as f:
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
         json.dump(history, f, indent=2)
 
 # -------------------------------
@@ -34,14 +30,13 @@ def save_history(history):
 def read_file(file):
     try:
         return file.read().decode("utf-8")
-    except:
+    except Exception:
         return str(file.read())
 
 
 # -------------------------------
 # PARSER
 # -------------------------------
-
 def parse_config(config):
     data = {
         "hostname": None,
@@ -150,15 +145,11 @@ def compare_configs(c1, c2):
 # -------------------------------
 def impact_analysis(changes):
     results = []
-
     history = load_history()
 
     for change in changes:
         c = change.lower()
 
-        # -------------------------------
-        # RISK LOGIC (FIXED ONLY)
-        # -------------------------------
         if "routing" in c and "removed" in c:
             risk = "HIGH"
             impact = "Routing removed → network connectivity may break"
@@ -195,13 +186,9 @@ def impact_analysis(changes):
             risk = "LOW"
             impact = "Minor change"
 
-        # -------------------------------
-        # AI LEARNING
-        # -------------------------------
         confidence = "LOW"
-
         for past in history:
-            if past["change"].lower() == change.lower():
+            if past.get("change", "").lower() == change.lower():
                 confidence = "HIGH"
                 break
 
@@ -219,15 +206,8 @@ def impact_analysis(changes):
 # FINAL DECISION
 # -------------------------------
 def final_decision(analysis):
-
-    has_high = False
-    has_medium = False
-
-    for item in analysis:
-        if item["risk"] == "HIGH":
-            has_high = True
-        elif item["risk"] == "MEDIUM":
-            has_medium = True
+    has_high = any(item["risk"] == "HIGH" for item in analysis)
+    has_medium = any(item["risk"] == "MEDIUM" for item in analysis)
 
     if has_high:
         return "❌ DO NOT APPLY (CRITICAL RISK)"
@@ -235,6 +215,7 @@ def final_decision(analysis):
         return "⚠️ REVIEW REQUIRED"
     else:
         return "✅ SAFE TO APPLY"
+
 
 # -------------------------------
 # AI REVIEW (OPENAI)
@@ -274,11 +255,12 @@ def generate_ai_recommendation(analysis, decision, model="gpt-4.1-mini"):
     )
 
     return response.output_text
+
+
 # -------------------------------
 # UI
 # -------------------------------
 st.title("🚀 Network Pre-Change Validator")
-
 st.subheader("📥 Input Options")
 
 col1, col2 = st.columns(2)
@@ -291,6 +273,9 @@ with col2:
     config_b_text = st.text_area("Paste Proposed Config (optional)", height=300)
     config_b_file = st.file_uploader("Or Upload Proposed Config")
 
+# AI model selector
+ai_model = st.text_input("AI Model", value="gpt-4.1-mini")
+
 def get_config(text, file):
     if text and text.strip():
         return text
@@ -298,7 +283,7 @@ def get_config(text, file):
         return read_file(file)
     else:
         return ""
-ai_model = st.text_input("AI Model", value="gpt-4.1-mini")
+
 if st.button("Analyze"):
 
     config_a = get_config(config_a_text, config_a_file)
@@ -345,18 +330,24 @@ if st.button("Analyze"):
         # IMPACT GROUPING
         # -------------------------------
         st.subheader("📊 Impact Analysis")
-
         for a in analysis:
-            st.write(f"{a['change']} → {a['impact']} (Risk: {a['risk']}, Confidence: {a['confidence']})")
+            st.write(
+                f"{a['change']} → {a['impact']} "
+                f"(Risk: {a['risk']}, Confidence: {a['confidence']})"
+            )
 
         # -------------------------------
         # FINAL DECISION
         # -------------------------------
         st.subheader("🚨 Final Decision")
         st.write(decision)
+
+        # -------------------------------
+        # AI CHANGE REVIEW
+        # -------------------------------
         st.subheader("🤖 AI Change Review")
-try:
-    ai_text = generate_ai_recommendation(analysis, decision, ai_model)
-    st.write(ai_text)
-except Exception as e:
-    st.warning(f"AI review unavailable: {e}")
+        try:
+            ai_text = generate_ai_recommendation(analysis, decision, ai_model)
+            st.write(ai_text)
+        except Exception as e:
+            st.warning(f"AI review unavailable: {e}")
