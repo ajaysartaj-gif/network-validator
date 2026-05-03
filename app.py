@@ -6,8 +6,6 @@ import streamlit as st
 import json
 import os
 
-HISTORY_FILE = "change_history.json"
-
 def load_history():
     if os.path.exists(HISTORY_FILE):
         with open(HISTORY_FILE, "r") as f:
@@ -294,6 +292,9 @@ if st.button("Analyze"):
         changes = compare_configs(parsed_a, parsed_b)
         analysis = impact_analysis(changes)
         decision = final_decision(analysis)
+    import os
+         if os.path.exists("change_history.json"):
+         os.remove("change_history.json")
 
         # -------------------------------
         # CHANGES
