@@ -5,7 +5,7 @@ import streamlit as st
 # -------------------------------
 import json
 import os
-
+HISTORY_FILE = "change_history.json"
 
 def load_history():
     if not os.path.exists(HISTORY_FILE):
