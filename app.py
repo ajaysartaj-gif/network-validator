@@ -291,20 +291,29 @@ def generate_ai_recommendation(analysis, decision, model="openrouter/free"):
     )
 
     try:
-        client = OpenAI(api_key=api_key, base_url=base_url)
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
-            max_tokens=400,
-        )
-        return resp.choices[0].message.content
-    except Exception as e:
-        return (
-            f"⚠️ Free model unavailable/rate-limited: {e}\n\n"
-            + generate_fallback_review(analysis, decision)
-        )
+    client = OpenAI(api_key=api_key, base_url=base_url)
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+        max_tokens=400,
+    )
 
+    # Safe extraction
+    content = None
+    if resp and getattr(resp, "choices", None):
+        msg = resp.choices[0].message
+        if msg:
+            content = getattr(msg, "content", None)
+
+    if content and str(content).strip():
+        return content
+
+    # fallback if provider gives empty content
+    return "⚠️ AI returned empty response. Try another model or rerun."
+
+except Exception as e:
+    return f"⚠️ AI review unavailable: {e}\n\n" + generate_fallback_review(analysis, decision)
 
 # -------------------------------
 # UI
