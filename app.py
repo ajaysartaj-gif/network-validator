@@ -6,12 +6,14 @@ import streamlit as st
 import json
 import os
 HISTORY_FILE = "change_history.json"
-
 def load_history():
-    if not os.path.exists(HISTORY_FILE):
-        # create empty file automatically
-        with open(HISTORY_FILE, "w") as f:
-            json.dump([], f)
+    try:
+        if not os.path.exists(HISTORY_FILE):
+            return []
+
+        with open(HISTORY_FILE, "r") as f:
+            return json.load(f)
+    except:
         return []
 
     try:
