@@ -205,10 +205,15 @@ def final_decision(analysis):
 # AI REVIEW (OPENAI)
 # -------------------------------
 def generate_ai_recommendation(analysis, decision, model="gpt-4.1-mini"):
-    # supports both Streamlit Cloud secrets and local env var
-    api_key = st.secrets.get("API_Key_XX") or st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+    # Supports Streamlit Cloud secrets + local env var
+    api_key = (
+        st.secrets.get("API_Key_XX")
+        or st.secrets.get("OPENAI_API_KEY")
+        or os.getenv("OPENAI_API_KEY")
+    )
+
     if not api_key:
-        return ("Api_key")
+        return "⚠️ API key not found. Add API_Key_XX or OPENAI_API_KEY in Streamlit Secrets."
 
     client = OpenAI(api_key=api_key)
 
@@ -232,11 +237,10 @@ def generate_ai_recommendation(analysis, decision, model="gpt-4.1-mini"):
     response = client.responses.create(
         model=model,
         input=prompt,
-        max_output_tokens=400
+        max_output_tokens=400,
     )
+
     return response.output_text
-
-
 # -------------------------------
 # UI
 # -------------------------------
