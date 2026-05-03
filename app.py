@@ -1,6 +1,24 @@
 import streamlit as st
 
 # -------------------------------
+# HISTORY (AI MEMORY)
+# -------------------------------
+import json
+import os
+
+HISTORY_FILE = "change_history.json"
+
+def load_history():
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+def save_history(history):
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=2)
+
+# -------------------------------
 # FILE READER
 # -------------------------------
 def read_file(file):
@@ -162,12 +180,20 @@ def impact_analysis(changes):
             risk = "LOW"
             impact = "Minor change"
 
-        results.append({
-            "change": change,
-            "impact": impact,
-            "risk": risk
-        })
+        history = load_history()
 
+confidence = "LOW"
+
+for past in history:
+    if past["change"] == change:
+        confidence = "HIGH"
+
+results.append({
+    "change": change,
+    "impact": impact,
+    "risk": risk,
+    "confidence": confidence
+})
     return results
     # -------------------------------
 # RISK SCORE
@@ -208,9 +234,7 @@ def final_decision(analysis):
         return "⚠️ REVIEW REQUIRED"
     else:
         return "✅ SAFE TO APPLY"
-# -------------------------------
-# UI
-# -------------------------------
+
 # -------------------------------
 # UI
 # -------------------------------
@@ -261,6 +285,18 @@ if st.button("Analyze"):
         else:
             for c in changes:
                 st.write("-", c)
+# -------------------------------
+# SAVE HISTORY (LEARNING)
+# -------------------------------
+history = load_history()
+
+for a in analysis:
+    history.append({
+        "change": a["change"],
+        "risk": a["risk"]
+    })
+
+save_history(history)
 
         # -------------------------------
         # IMPACT GROUPING
