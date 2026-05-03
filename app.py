@@ -263,6 +263,7 @@ with col2:
     config_b_text = st.text_area("Paste Proposed Config (optional)", height=300)
     config_b_file = st.file_uploader("Or Upload Proposed Config")
 
+
 def get_config(text, file):
     if text and text.strip():
         return text
@@ -270,6 +271,7 @@ def get_config(text, file):
         return read_file(file)
     else:
         return ""
+
 
 if st.button("Analyze"):
 
@@ -296,25 +298,22 @@ if st.button("Analyze"):
         else:
             for c in changes:
                 st.write("-", c)
-# -------------------------------
-# SAVE HISTORY (LEARNING)
-# -------------------------------
-history = load_history()
 
-for a in analysis:
-    history = load_history()
+        # -------------------------------
+        # SAVE HISTORY (CLEAN VERSION)
+        # -------------------------------
+        history = load_history()
 
-for a in analysis:
-    entry = {
-        "change": a["change"],
-        "risk": a["risk"]
-    }
+        for a in analysis:
+            entry = {
+                "change": a["change"],
+                "risk": a["risk"]
+            }
 
-    if entry not in history:   # جلوگیری duplicate
-        history.append(entry)
+            if entry not in history:
+                history.append(entry)
 
-save_history(history)
-save_history(history)
+        save_history(history)
 
         # -------------------------------
         # IMPACT GROUPING
@@ -328,17 +327,17 @@ save_history(history)
         if high:
             st.error("🔴 HIGH RISK")
             for a in high:
-                st.write(f"{a['change']} → {a['impact']}")
+                st.write(f"{a['change']} → {a['impact']} (Confidence: {a['confidence']})")
 
         if medium:
             st.warning("🟡 MEDIUM RISK")
             for a in medium:
-                st.write(f"{a['change']} → {a['impact']}")
+                st.write(f"{a['change']} → {a['impact']} (Confidence: {a['confidence']})")
 
         if low:
             st.success("🟢 LOW RISK")
             for a in low:
-                st.write(f"{a['change']} → {a['impact']}")
+                st.write(f"{a['change']} → {a['impact']} (Confidence: {a['confidence']})")
 
         # -------------------------------
         # TABLE OUTPUT
