@@ -8,10 +8,17 @@ import os
 HISTORY_FILE = "change_history.json"
 
 def load_history():
-    if os.path.exists(HISTORY_FILE):
+    if not os.path.exists(HISTORY_FILE):
+        # create empty file automatically
+        with open(HISTORY_FILE, "w") as f:
+            json.dump([], f)
+        return []
+
+    try:
         with open(HISTORY_FILE, "r") as f:
             return json.load(f)
-    return []
+    except:
+        return []
 
 def save_history(history):
     with open(HISTORY_FILE, "w") as f:
