@@ -337,7 +337,7 @@ if st.button("Analyze"):
         parsed_b = parse_config(config_b)
 
         changes = compare_configs(parsed_a, parsed_b)
-        changes = sorted(changes)  # sorted changes
+        changes = sorted(changes)
         analysis = impact_analysis(changes)
         decision = final_decision(analysis)
 
@@ -345,8 +345,8 @@ if st.button("Analyze"):
         if not changes:
             st.write("No changes detected")
         else:
-            for c in changes:
-                st.write("-", c)
+            changes_table = [{"Change": c} for c in changes]
+            st.table(changes_table)
 
         st.divider()
 
@@ -358,11 +358,17 @@ if st.button("Analyze"):
         save_history(history)
 
         st.subheader("📊 Impact Analysis")
-        for a in analysis:
-            st.write(
-                f"{a['change']} → {a['impact']} "
-                f"(Risk: {a['risk']}, Confidence: {a['confidence']} - {a['confidence_reason']})"
-            )
+        impact_table = [
+            {
+                "Change": a["change"],
+                "Impact": a["impact"],
+                "Risk": a["risk"],
+                "Confidence": a["confidence"],
+                "Confidence Reason": a["confidence_reason"]
+            }
+            for a in analysis
+        ]
+        st.table(impact_table)
 
         st.divider()
 
@@ -373,4 +379,4 @@ if st.button("Analyze"):
 
         st.subheader("🤖 AI Change Review")
         ai_text = generate_ai_recommendation(analysis, decision, ai_model)
-        st.markdown(ai_text)  # markdown AI output
+        st.markdown(ai_text)
