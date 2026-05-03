@@ -161,12 +161,6 @@ def impact_analysis(changes):
         else:
             risk = "LOW"
             impact = "Minor change"
-
-        results.append({
-            "change": change,
-            "impact": impact,
-            "risk": risk
-        }}
 import pandas as pd
 
 st.subheader("📋 Structured Output")
