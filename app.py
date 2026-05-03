@@ -124,7 +124,7 @@ def impact_analysis(changes):
     results = []
 
     for change in changes:
-        c = change.lower()   # ✅ normalize
+        c = change.lower()
 
         if "routing removed" in c:
             risk = "HIGH"
@@ -161,19 +161,15 @@ def impact_analysis(changes):
         else:
             risk = "LOW"
             impact = "Minor change"
-import pandas as pd
 
-st.subheader("📋 Structured Output")
-
-df = pd.DataFrame(analysis)
-st.dataframe(df)
-results.append({
+        results.append({
             "change": change,
             "impact": impact,
             "risk": risk
-        }}
-return results
-# -------------------------------
+        })
+
+    return results
+    # -------------------------------
 # RISK SCORE
 # -------------------------------
 def calculate_risk_score(analysis):
@@ -250,9 +246,37 @@ if st.button("Analyze"):
         parsed_b = parse_config(config_b)
 
         changes = compare_configs(parsed_a, parsed_b)
-        analysis = impact_analysis(changes)
-        decision = final_decision(analysis)
+        st.subheader("📊 Impact Analysis")
 
+high = [a for a in analysis if a["risk"] == "HIGH"]
+medium = [a for a in analysis if a["risk"] == "MEDIUM"]
+low = [a for a in analysis if a["risk"] == "LOW"]
+
+if high:
+    st.error("🔴 HIGH RISK")
+    for a in high:
+        st.write(f"{a['change']} → {a['impact']}")
+
+if medium:
+    st.warning("🟡 MEDIUM RISK")
+    for a in medium:
+        st.write(f"{a['change']} → {a['impact']}")
+
+if low:
+    st.success("🟢 LOW RISK")
+    for a in low:
+        st.write(f"{a['change']} → {a['impact']}")
+
+# TABLE OUTPUT
+import pandas as pd
+
+st.subheader("📋 Structured Output")
+df = pd.DataFrame(analysis)
+st.dataframe(df)
+
+# FINAL DECISION
+st.subheader("🚨 Final Decision")
+st.write(decision)
         st.subheader("🔍 Changes Detected")
         if not changes:
             st.write("No changes detected")
