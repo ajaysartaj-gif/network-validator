@@ -1,7 +1,7 @@
 import json
 import os
-import requests
 import streamlit as st
+from openai import OpenAI
 
 HISTORY_FILE = "change_history.json"
 
@@ -46,7 +46,7 @@ def parse_config(config):
         "vlans": set(),
         "interfaces": set(),
         "acls": set(),
-        "routing": set(),
+        "routing": set()
     }
 
     for line in config.splitlines():
@@ -104,6 +104,7 @@ def parse_config(config):
 def compare_configs(c1, c2):
     changes = []
 
+    # VLAN
     for v in c1["vlans"]:
         if v not in c2["vlans"]:
             changes.append(f"VLAN {v} removed")
@@ -111,6 +112,7 @@ def compare_configs(c1, c2):
         if v not in c1["vlans"]:
             changes.append(f"VLAN {v} added")
 
+    # INTERFACE
     for i in c1["interfaces"]:
         if i not in c2["interfaces"]:
             changes.append(f"Interface {i} removed")
@@ -118,6 +120,7 @@ def compare_configs(c1, c2):
         if i not in c1["interfaces"]:
             changes.append(f"Interface {i} added")
 
+    # ACL
     for a in c1["acls"]:
         if a not in c2["acls"]:
             changes.append(f"ACL removed: {a}")
@@ -125,6 +128,7 @@ def compare_configs(c1, c2):
         if a not in c1["acls"]:
             changes.append(f"ACL added: {a}")
 
+    # ROUTING
     for r in c1["routing"]:
         if r not in c2["routing"]:
             changes.append(f"Routing removed: {r}")
@@ -179,14 +183,12 @@ def impact_analysis(changes):
                 confidence = "HIGH"
                 break
 
-        results.append(
-            {
-                "change": change,
-                "impact": impact,
-                "risk": risk,
-                "confidence": confidence,
-            }
-        )
+        results.append({
+            "change": change,
+            "impact": impact,
+            "risk": risk,
+            "confidence": confidence
+        })
 
     return results
 
@@ -200,18 +202,56 @@ def final_decision(analysis):
 
     if has_high:
         return "❌ DO NOT APPLY (CRITICAL RISK)"
-    if has_medium:
+    elif has_medium:
         return "⚠️ REVIEW REQUIRED"
-    return "✅ SAFE TO APPLY"
+    else:
+        return "✅ SAFE TO APPLY"
 
 
 # -------------------------------
-# OLLAMA AI REVIEW
+# FREE FALLBACK REVIEW
 # -------------------------------
-def generate_ai_recommendation_ollama(analysis, decision, model="llama3.2"):
-    # For local run: default localhost
-    # For Streamlit Cloud: set in secrets -> OLLAMA_BASE_URL = "https://your-ollama-host"
-    ollama_base_url = st.secrets.get("OLLAMA_BASE_URL") or os.getenv("OLLAMA_BASE_URL") or "http://127.0.0.1:11434"
+def generate_fallback_review(analysis, decision):
+    if not analysis:
+        return (
+            "### AI Review (Fallback)\n"
+            "- No config changes detected.\n"
+            "- Recommendation: proceed with standard post-change verification."
+        )
+
+    high = [a for a in analysis if a["risk"] == "HIGH"]
+    medium = [a for a in analysis if a["risk"] == "MEDIUM"]
+    low = [a for a in analysis if a["risk"] == "LOW"]
+
+    lines = [
+        "### AI Review (Fallback Mode)",
+        f"- HIGH risk changes: {len(high)}",
+        f"- MEDIUM risk changes: {len(medium)}",
+        f"- LOW risk changes: {len(low)}",
+        f"- Final Decision: {decision}",
+        "",
+        "Top checks:",
+        "- Verify VLAN gateway reachability and host connectivity.",
+        "- Validate routing neighbors/routes and path changes.",
+        "- Confirm ACL behavior against intended traffic.",
+        "",
+        "Rollback:",
+        "- Keep previous config snapshot ready.",
+        "- Revert high-risk removals first (routing/ACL/VLAN).",
+        "- Re-run validation after rollback."
+    ]
+    return "\n".join(lines)
+
+
+# -------------------------------
+# AI REVIEW (OPENROUTER FREE)
+# -------------------------------
+def generate_ai_recommendation(analysis, decision, model="openrouter/free"):
+    api_key = st.secrets.get("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_API_KEY")
+    base_url = st.secrets.get("OPENROUTER_BASE_URL") or os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1"
+
+    if not api_key:
+        return "⚠️ OPENROUTER_API_KEY not found. Add it in Streamlit Secrets."
 
     summary_lines = [
         f"- {item['change']} | Risk={item['risk']} | Impact={item['impact']}"
@@ -220,39 +260,35 @@ def generate_ai_recommendation_ollama(analysis, decision, model="llama3.2"):
 
     prompt = (
         "You are a senior network change reviewer.\n"
-        "Given these config changes, provide:\n"
+        "Given these changes, provide:\n"
         "1) Short risk summary\n"
         "2) Top 3 verification checks/commands\n"
         "3) Rollback plan bullets\n"
-        "Be concise and practical.\n\n"
+        "Keep it concise and practical.\n\n"
         f"Tool decision: {decision}\n"
-        "Changes:\n"
-        + "\n".join(summary_lines)
+        "Changes:\n" + "\n".join(summary_lines)
     )
 
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False
-    }
-
     try:
-        resp = requests.post(
-            f"{ollama_base_url.rstrip('/')}/api/generate",
-            json=payload,
-            timeout=90
+        client = OpenAI(api_key=api_key, base_url=base_url)
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+            max_tokens=400
         )
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("response", "No AI response returned.")
-    except requests.exceptions.RequestException as e:
-        return f"⚠️ Ollama connection failed: {e}"
+        return resp.choices[0].message.content
+    except Exception as e:
+        return (
+            f"⚠️ Free model unavailable/rate-limited: {e}\n\n"
+            + generate_fallback_review(analysis, decision)
+        )
 
 
 # -------------------------------
 # UI
 # -------------------------------
-st.title("🚀 Network Pre-Change Validator (Ollama Edition)")
+st.title("🚀 Network Pre-Change Validator")
 st.subheader("📥 Input Options")
 
 col1, col2 = st.columns(2)
@@ -265,17 +301,16 @@ with col2:
     config_b_text = st.text_area("Paste Proposed Config (optional)", height=300)
     config_b_file = st.file_uploader("Or Upload Proposed Config")
 
-st.subheader("🤖 AI Settings (Ollama)")
-model = st.selectbox("Model", ["llama3.2", "mistral"], index=0)
-st.caption("If deployed online, set OLLAMA_BASE_URL in Streamlit Secrets to your Ollama server URL.")
+ai_model = st.text_input("AI model", value="openrouter/free")
 
 
 def get_config(text, file):
     if text and text.strip():
         return text
-    if file is not None:
+    elif file is not None:
         return read_file(file)
-    return ""
+    else:
+        return ""
 
 
 if st.button("Analyze"):
@@ -316,6 +351,6 @@ if st.button("Analyze"):
         st.subheader("🚨 Final Decision")
         st.write(decision)
 
-        st.subheader("🧠 AI Change Review (Ollama)")
-        ai_text = generate_ai_recommendation_ollama(analysis, decision, model=model)
+        st.subheader("🤖 AI Change Review")
+        ai_text = generate_ai_recommendation(analysis, decision, ai_model)
         st.write(ai_text)
