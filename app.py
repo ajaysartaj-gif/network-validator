@@ -265,8 +265,27 @@ if st.button("Analyze"):
                 st.write("-", c)
 
         st.subheader("📊 Impact Analysis")
-        for a in analysis:
-            st.write(f"{a['change']} → {a['impact']} (Risk: {a['risk']})")
 
-        st.subheader("🚨 Final Decision")
-        st.write(decision)
+high = [a for a in analysis if a["risk"] == "HIGH"]
+medium = [a for a in analysis if a["risk"] == "MEDIUM"]
+low = [a for a in analysis if a["risk"] == "LOW"]
+
+if high:
+    st.error("🔴 HIGH RISK")
+    for a in high:
+        st.write(f"{a['change']} → {a['impact']}")
+
+if medium:
+    st.warning("🟡 MEDIUM RISK")
+    for a in medium:
+        st.write(f"{a['change']} → {a['impact']}")
+
+if low:
+    st.success("🟢 LOW RISK")
+    for a in low:
+        st.write(f"{a['change']} → {a['impact']}")
+        import pandas as pd
+
+st.subheader("📋 Structured Output")
+df = pd.DataFrame(analysis)
+st.dataframe(df)
