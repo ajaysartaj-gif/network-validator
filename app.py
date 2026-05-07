@@ -2,9 +2,21 @@ import json
 import os
 import streamlit as st
 from openai import OpenAI
-from engine.semantic_engine import semantic_normalize
-from engine.graph_engine import build_relationship_graph
-from engine.risk_engine import advanced_risk_reasoning
+from engine.graph_engine import (
+    build_relationship_graph
+)
+
+from engine.risk_engine import (
+    advanced_risk_reasoning)
+
+from engine.semantic_diff import (
+    semantic_diff)
+
+from engine.topology_engine import (
+    build_topology_view)
+
+from engine.blast_radius_engine import (
+    calculate_blast_radius)
 
 HISTORY_FILE = "change_history.json"
 # -------------------------------
@@ -324,6 +336,25 @@ if st.button("Analyze"):
         semantic_objects = semantic_normalize(
         config_b,
         parsed_b)
+        old_semantic = semantic_normalize(
+        config_a,
+        parsed_a)
+
+        semantic_changes = semantic_diff(
+        old_semantic,
+        semantic_objects)
+
+        relationship_graph = build_relationship_graph(
+        semantic_objects)
+        topology = build_topology_view(
+        semantic_objects)
+
+        blast_radius = calculate_blast_radius(
+        semantic_objects)
+
+        advanced_risk = advanced_risk_reasoning(
+        semantic_objects)
+        
         relationship_graph = build_relationship_graph(
         semantic_objects)
         advanced_risk = advanced_risk_reasoning(
@@ -377,6 +408,15 @@ if st.button("Analyze"):
         }])
         st.divider()
         st.subheader("🧠 Semantic Objects")
+        st.divider()
+        st.subheader("🔄 Semantic Diff")
+        st.table(semantic_changes)
+        st.divider()
+        st.subheader("🌐 Topology Intelligence")
+        st.json(topology)
+        st.divider()
+        st.subheader("💥 Blast Radius")
+        st.table(blast_radius)
         st.table(semantic_objects)
         st.caption("Pattern features extracted from this change set")
         st.table([pattern["features"]])
