@@ -481,17 +481,16 @@ pattern = pattern_summary(
         # CHANGES
         # -------------------------------
 
-    st.subheader(
-            "🔍 Changes Detected"
-        )
+st.subheader(
+            "🔍 Changes Detected")
 
-        if not changes:
+    if not changes:
 
             st.write(
                 "No changes detected"
             )
 
-        else:
+    else:
 
             changes_table = [
 
