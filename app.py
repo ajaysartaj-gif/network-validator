@@ -37,67 +37,6 @@ def read_file(file):
     except Exception:
         return str(file.read())
 
-
-# -------------------------------
-# PARSER
-# -------------------------------
-def parse_config(config):
-    data = {
-        "hostname": None,
-        "vlans": set(),
-        "interfaces": set(),
-        "acls": set(),
-        "routing": set()
-    }
-
-    for line in config.splitlines():
-        raw = line.strip()
-        line = raw.lower()
-
-        if not line or line.startswith(("!", "#")):
-            continue
-
-        # CISCO
-        if line.startswith("hostname"):
-            parts = line.split()
-            if len(parts) > 1:
-                data["hostname"] = parts[1]
-
-        elif line.startswith("vlan"):
-            parts = line.split()
-            if len(parts) > 1:
-                data["vlans"].add(parts[1])
-
-        elif line.startswith("interface"):
-            parts = line.split()
-            if len(parts) > 1:
-                data["interfaces"].add(parts[1])
-
-        elif line.startswith("access-list"):
-            data["acls"].add(line)
-
-        elif line.startswith("router ospf") or line.startswith("router bgp"):
-            data["routing"].add(line)
-
-        # JUNIPER
-        elif line.startswith("set system host-name"):
-            parts = line.split()
-            data["hostname"] = parts[-1]
-
-        elif "set interfaces" in line:
-            parts = line.split()
-            if len(parts) > 2:
-                data["interfaces"].add(parts[2])
-
-        elif "set vlans" in line and "vlan-id" in line:
-            parts = line.split()
-            data["vlans"].add(parts[-1])
-
-        elif "set protocols ospf" in line or "set protocols bgp" in line:
-            data["routing"].add(line)
-
-    return data
-
 # -------------------------------
 # IMPACT ANALYSIS
 # -------------------------------
