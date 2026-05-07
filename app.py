@@ -12,132 +12,6 @@ from engine.semantic_engine import (
 )
 
 HISTORY_FILE = "change_history.json"
-
-SEMANTIC_TAXONOMY = {
-
-    "routing": {
-        "ospf": [
-            "router ospf",
-            "set protocols ospf"
-        ],
-        "bgp": [
-            "router bgp",
-            "set protocols bgp"
-        ]
-    },
-
-    "security": {
-        "acl": [
-            "access-list",
-            "firewall filter"
-        ],
-        "aaa": [
-            "aaa",
-            "tacacs",
-            "radius",
-            "set system login"
-        ],
-        "ssh": [
-            "transport input ssh",
-            "set system services ssh"
-        ],
-        "telnet": [
-            "transport input telnet",
-            "set system services telnet"
-        ]
-    },
-
-    "monitoring": {
-        "snmp": [
-            "snmp-server",
-            "set snmp"
-        ],
-        "syslog": [
-            "logging host",
-            "set system syslog"
-        ],
-        "netflow": [
-            "flow exporter",
-            "ip flow",
-            "netflow"
-        ]
-    },
-
-    "layer2": {
-        "vlan": [
-            "vlan",
-            "set vlans"
-        ],
-        "stp": [
-            "spanning-tree",
-            "rstp",
-            "mstp"
-        ],
-        "lldp": [
-            "lldp",
-            "cdp"
-        ]
-    },
-
-    "layer2_security": {
-        "port_security": [
-            "switchport port-security"
-        ],
-        "dhcp_snooping": [
-            "ip dhcp snooping"
-        ],
-        "arp_inspection": [
-            "ip arp inspection"
-        ]
-    },
-
-    "interface": {
-        "physical_interface": [
-            "interface",
-            "set interfaces"
-        ],
-        "port_channel": [
-            "port-channel",
-            "ae"
-        ]
-    },
-
-    "services": {
-        "ntp": [
-            "ntp server",
-            "set system ntp"
-        ],
-        "dhcp": [
-            "ip dhcp",
-            "system services dhcp"
-        ],
-        "dns": [
-            "ip name-server",
-            "system name-server"
-        ]
-    },
-
-    "vpn": {
-        "ipsec": [
-            "crypto isakmp",
-            "set security ipsec"
-        ],
-        "gre": [
-            "interface tunnel",
-            "gr-"
-        ]
-    },
-
-    "qos": {
-        "policy_map": [
-            "policy-map",
-            "class-map",
-            "class-of-service"
-        ]
-    }
-}
-
-
 # -------------------------------
 # DEVICE ROLE MODEL
 # -------------------------------
@@ -627,24 +501,6 @@ def generate_ai_recommendation(analysis, decision, model="openrouter/free"):
             f"⚠️ Free model unavailable/rate-limited: {e}\n\n"
             + generate_fallback_review(analysis, decision)
         )
-
-# -------------------------------
-# SEMANTIC ENGINE
-# -------------------------------
-
-semantic_objects = semantic_normalize(
-    config_b,
-    parsed_b
-)
-
-relationship_graph = build_relationship_graph(
-    semantic_objects
-)
-
-advanced_risk = advanced_risk_reasoning(
-    semantic_objects
-)
-
 # -------------------------------
 # UI
 # -------------------------------
@@ -677,6 +533,17 @@ if st.button("Analyze"):
     pattern = pattern_summary(changes)
     config_a = get_config(config_a_text, config_a_file)
     config_b = get_config(config_b_text, config_b_file)
+
+    semantic_objects = semantic_normalize(
+    config_b,
+    parsed_b)
+
+    relationship_graph = build_relationship_graph(
+    semantic_objects)
+
+    advanced_risk = advanced_risk_reasoning(
+    semantic_objects)
+
 
     if not config_a or not config_b:
         st.error("Provide both configs (paste or upload)")
