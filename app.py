@@ -333,11 +333,9 @@ if st.button("Analyze"):
     
     else:
         semantic_objects = semantic_normalize(
-        config_b,
-        parsed_b)
+        config_b,)
         old_semantic = semantic_normalize(
-        config_a,
-        parsed_a)
+        config_a,)
 
         semantic_changes = semantic_diff(
         old_semantic,
