@@ -503,7 +503,7 @@ else:
                 changes_table
             )
 
-        st.divider()
+st.divider()
         # -------------------------------
         # SAVE HISTORY
         # -------------------------------
