@@ -445,17 +445,37 @@ try:
 except Exception as e:
     advanced_risk = {"error": str(e)}
     
-        # -------------------------------
-        # IMPACT ANALYSIS
-        # -------------------------------
-        analysis = impact_analysis(changes)
-        decision = final_decision(analysis)
+# -------------------------------
+# LEGACY IMPACT ANALYSIS
+# -------------------------------
 
-        # -------------------------------
-        # PATTERN AI
-        # -------------------------------
-        pattern = pattern_summary(changes)
+legacy_analysis = impact_analysis(
+    changes
+)
 
+# -------------------------------
+# SEMANTIC RISK ENGINE
+# -------------------------------
+
+semantic_risk = advanced_risk_reasoning(
+    semantic_objects
+)
+
+# -------------------------------
+# FINAL DECISION
+# -------------------------------
+
+decision = final_decision(
+    legacy_analysis
+)
+
+# -------------------------------
+# PATTERN AI
+# -------------------------------
+
+pattern = pattern_summary(
+    changes
+)
         # -------------------------------
         # CHANGES
         # -------------------------------
