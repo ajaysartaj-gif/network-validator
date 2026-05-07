@@ -174,6 +174,35 @@ def semantic_operational_impact(feature):
     }
 
     return impact_map.get(feature, [])
+    # -------------------------------
+# DEVICE ROLE MODEL
+# -------------------------------
+
+DEVICE_ROLE_RULES = {
+
+    "core_router": [
+        "core",
+        "border",
+        "wan"
+    ],
+
+    "distribution_switch": [
+        "dist",
+        "distribution"
+    ],
+
+    "access_switch": [
+        "access"
+    ],
+
+    "firewall": [
+        "firewall",
+        "paloalto",
+        "fortigate"
+    ]
+}
+
+
 
 
 
