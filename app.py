@@ -3,6 +3,13 @@ import os
 import streamlit as st
 from openai import OpenAI
 from engine.taxonomy import SEMANTIC_TAXONOMY
+from engine.semantic_engine import (
+    detect_device_role,
+    semantic_normalize,
+    semantic_default_risk,
+    semantic_dependencies,
+    semantic_operational_impact
+)
 
 HISTORY_FILE = "change_history.json"
 
