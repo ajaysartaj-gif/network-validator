@@ -575,7 +575,7 @@ if st.button("Analyze"):
               semantic_objects
               )
 
-        except Exception as e:
+    except Exception as e:
 
             advanced_risk = {
                 "error": str(e)
