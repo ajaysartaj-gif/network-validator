@@ -481,7 +481,7 @@ pattern = pattern_summary(
         # CHANGES
         # -------------------------------
 
-        st.subheader(
+    st.subheader(
             "🔍 Changes Detected"
         )
 
