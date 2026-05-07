@@ -507,7 +507,7 @@ st.divider()
         # -------------------------------
         # SAVE HISTORY
         # -------------------------------
-        history = load_history()
+history = load_history()
         for a in analysis:
             entry = {"change": a["change"], "risk": a["risk"]}
             if entry not in history:
