@@ -380,8 +380,8 @@ else:
     analysis = impact_analysis(changes)
 
     decision = final_decision(analysis)
-        st.subheader("🔍 Changes Detected")
-    if not changes:
+    st.subheader("🔍 Changes Detected")
+     if not changes:
             st.write("No changes detected")
         else:
             changes_table = [{"Change": c} for c in changes]
