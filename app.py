@@ -3,6 +3,8 @@ import os
 import streamlit as st
 from openai import OpenAI
 from engine.semantic_engine import semantic_normalize
+from engine.graph_engine import build_relationship_graph
+from engine.risk_engine import advanced_risk_reasoning
 
 HISTORY_FILE = "change_history.json"
 # -------------------------------
@@ -95,48 +97,6 @@ def parse_config(config):
             data["routing"].add(line)
 
     return data
-
-
-# -------------------------------
-# COMPARE CONFIGS
-# -------------------------------
-def compare_configs(c1, c2):
-    changes = []
-
-    # VLAN
-    for v in c1["vlans"]:
-        if v not in c2["vlans"]:
-            changes.append(f"VLAN {v} removed")
-    for v in c2["vlans"]:
-        if v not in c1["vlans"]:
-            changes.append(f"VLAN {v} added")
-
-    # INTERFACE
-    for i in c1["interfaces"]:
-        if i not in c2["interfaces"]:
-            changes.append(f"Interface {i} removed")
-    for i in c2["interfaces"]:
-        if i not in c1["interfaces"]:
-            changes.append(f"Interface {i} added")
-
-    # ACL
-    for a in c1["acls"]:
-        if a not in c2["acls"]:
-            changes.append(f"ACL removed: {a}")
-    for a in c2["acls"]:
-        if a not in c1["acls"]:
-            changes.append(f"ACL added: {a}")
-
-    # ROUTING
-    for r in c1["routing"]:
-        if r not in c2["routing"]:
-            changes.append(f"Routing removed: {r}")
-    for r in c2["routing"]:
-        if r not in c1["routing"]:
-            changes.append(f"Routing added: {r}")
-
-    return changes
-
 
 # -------------------------------
 # IMPACT ANALYSIS
@@ -432,6 +392,7 @@ if st.button("Analyze"):
 
 
         changes = compare_configs(parsed_a, parsed_b)
+        pattern = pattern_summary(changes)
         changes = sorted(changes)
         analysis = impact_analysis(changes)
         decision = final_decision(analysis)
