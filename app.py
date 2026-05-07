@@ -332,7 +332,6 @@ if st.button("Analyze"):
         st.error("Provide both configs (paste or upload)")
     
     else:
-
         semantic_objects = semantic_normalize(
         config_b,
         parsed_b)
