@@ -416,35 +416,35 @@ if st.button("Analyze"):
         # ENGINE CALLS
         # -------------------------------
         try:
-            semantic_objects = semantic_normalize(config_a, config_b)
-        except Exception as e:
-            semantic_objects = [{"error": str(e)}]
+    semantic_objects = semantic_normalize(config_a, config_b)
+except Exception as e:
+    semantic_objects = [{"error": str(e)}]
 
-        try:
-            semantic_changes = semantic_diff(config_a, config_b)
-        except Exception as e:
-            semantic_changes = [{"error": str(e)}]
+try:
+    semantic_changes = semantic_diff(config_a, config_b)
+except Exception as e:
+    semantic_changes = [{"error": str(e)}]
 
-        try:
-            topology = build_topology_view(config_a, config_b)
-        except Exception as e:
-            topology = {"error": str(e)}
+try:
+    topology = build_topology_view(config_a, config_b)
+except Exception as e:
+    topology = {"error": str(e)}
 
-        try:
-            blast_radius = calculate_blast_radius(changes)
-        except Exception as e:
-            blast_radius = [{"error": str(e)}]
+try:
+    blast_radius = calculate_blast_radius(changes)
+except Exception as e:
+    blast_radius = [{"error": str(e)}]
 
-        try:
-            relationship_graph = build_relationship_graph(config_a, config_b)
-        except Exception as e:
-            relationship_graph = [{"error": str(e)}]
+try:
+    relationship_graph = build_relationship_graph(config_a, config_b)
+except Exception as e:
+    relationship_graph = [{"error": str(e)}]
 
-        try:
-            advanced_risk = advanced_risk_reasoning(changes)
-        except Exception as e:
-            advanced_risk = {"error": str(e)}
-
+try:
+    advanced_risk = advanced_risk_reasoning(changes)
+except Exception as e:
+    advanced_risk = {"error": str(e)}
+    
         # -------------------------------
         # IMPACT ANALYSIS
         # -------------------------------
@@ -514,54 +514,97 @@ if st.button("Analyze"):
         st.table([pattern["features"]])
 
         st.divider()
+# -------------------------------
+# SEMANTIC OBJECTS
+# -------------------------------
 
-        # -------------------------------
-        # SEMANTIC OBJECTS
-        # -------------------------------
-        st.subheader("🧠 Semantic Objects")
-        st.table(semantic_objects)
+try:
 
-        st.divider()
+    semantic_objects = semantic_normalize(
+        config_b,
+        parsed_b
+    )
 
-        # -------------------------------
-        # SEMANTIC DIFF
-        # -------------------------------
-        st.subheader("🔄 Semantic Diff")
-        st.table(semantic_changes)
+    old_semantic = semantic_normalize(
+        config_a,
+        parsed_a
+    )
 
-        st.divider()
+except Exception as e:
 
-        # -------------------------------
-        # TOPOLOGY
-        # -------------------------------
-        st.subheader("🌐 Topology Intelligence")
-        st.json(topology)
+    semantic_objects = [{"error": str(e)}]
+    old_semantic = []
 
-        st.divider()
+# -------------------------------
+# SEMANTIC DIFF
+# -------------------------------
 
-        # -------------------------------
-        # BLAST RADIUS
-        # -------------------------------
-        st.subheader("💥 Blast Radius")
-        st.table(blast_radius)
+try:
 
-        st.divider()
+    semantic_changes = semantic_diff(
+        old_semantic,
+        semantic_objects
+    )
 
-        # -------------------------------
-        # RELATIONSHIP GRAPH
-        # -------------------------------
-        st.subheader("🔗 Relationship Graph")
-        st.table(relationship_graph)
+except Exception as e:
 
-        st.divider()
+    semantic_changes = [{"error": str(e)}]
 
-        # -------------------------------
-        # ADVANCED RISK
-        # -------------------------------
-        st.subheader("🚨 Advanced Risk Reasoning")
-        st.table([advanced_risk])
+# -------------------------------
+# TOPOLOGY ENGINE
+# -------------------------------
 
-        st.divider()
+try:
+
+    topology = build_topology_view(
+        semantic_objects
+    )
+
+except Exception as e:
+
+    topology = {"error": str(e)}
+
+# -------------------------------
+# BLAST RADIUS
+# -------------------------------
+
+try:
+
+    blast_radius = calculate_blast_radius(
+        semantic_objects
+    )
+
+except Exception as e:
+
+    blast_radius = [{"error": str(e)}]
+
+# -------------------------------
+# RELATIONSHIP GRAPH
+# -------------------------------
+
+try:
+
+    relationship_graph = build_relationship_graph(
+        semantic_objects
+    )
+
+except Exception as e:
+
+    relationship_graph = [{"error": str(e)}]
+
+# -------------------------------
+# ADVANCED RISK
+# -------------------------------
+
+try:
+
+    advanced_risk = advanced_risk_reasoning(
+        semantic_objects
+    )
+
+except Exception as e:
+
+    advanced_risk = {"error": str(e)}
 
         # -------------------------------
         # FINAL DECISION
