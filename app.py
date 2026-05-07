@@ -2,24 +2,15 @@ import json
 import os
 import streamlit as st
 from openai import OpenAI
-from engine.graph_engine import (
-    build_relationship_graph
-)
-
-from engine.risk_engine import (
-    advanced_risk_reasoning)
-
-from engine.semantic_diff import (
-    semantic_diff)
-
-from engine.topology_engine import (
-    build_topology_view)
-
-from engine.blast_radius_engine import (
-    calculate_blast_radius)
+from engine.graph_engine import build_relationship_graph
+from engine.risk_engine import advanced_risk_reasoning
+from engine.semantic_diff import semantic_diff
+from engine.topology_engine import build_topology_view
+from engine.blast_radius_engine import calculate_blast_radius
 from engine.semantic_engine import semantic_normalize
 
 HISTORY_FILE = "change_history.json"
+
 # -------------------------------
 # HISTORY (AI MEMORY)
 # -------------------------------
@@ -28,7 +19,6 @@ def load_history():
         with open(HISTORY_FILE, "w", encoding="utf-8") as f:
             json.dump([], f)
         return []
-
     try:
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -49,6 +39,84 @@ def read_file(file):
         return file.read().decode("utf-8")
     except Exception:
         return str(file.read())
+
+
+# -------------------------------
+# CONFIG PARSER
+# -------------------------------
+def parse_config(config):
+    parsed = {
+        "hostname": None,
+        "vlans": [],
+        "interfaces": [],
+        "routing": [],
+        "acl": []
+    }
+
+    for line in config.splitlines():
+        line = line.strip()
+
+        if line.startswith("hostname"):
+            parts = line.split()
+            if len(parts) > 1:
+                parsed["hostname"] = parts[1]
+
+        elif line.startswith("vlan"):
+            parsed["vlans"].append(line)
+
+        elif line.startswith("interface"):
+            parsed["interfaces"].append(line)
+
+        elif (
+            "router ospf" in line
+            or "router bgp" in line
+            or "set protocols ospf" in line
+            or "set protocols bgp" in line
+        ):
+            parsed["routing"].append(line)
+
+        elif line.startswith("access-list") or "firewall filter" in line:
+            parsed["acl"].append(line)
+
+    return parsed
+
+
+# -------------------------------
+# CONFIG COMPARISON
+# -------------------------------
+def compare_configs(old, new):
+    changes = []
+
+    old_vlans = set(old["vlans"])
+    new_vlans = set(new["vlans"])
+    for vlan in old_vlans - new_vlans:
+        changes.append(f"VLAN removed: {vlan}")
+    for vlan in new_vlans - old_vlans:
+        changes.append(f"VLAN added: {vlan}")
+
+    old_int = set(old["interfaces"])
+    new_int = set(new["interfaces"])
+    for intf in old_int - new_int:
+        changes.append(f"Interface removed: {intf}")
+    for intf in new_int - old_int:
+        changes.append(f"Interface added: {intf}")
+
+    old_routing = set(old["routing"])
+    new_routing = set(new["routing"])
+    for r in old_routing - new_routing:
+        changes.append(f"Routing removed: {r}")
+    for r in new_routing - old_routing:
+        changes.append(f"Routing added: {r}")
+
+    old_acl = set(old["acl"])
+    new_acl = set(new["acl"])
+    for acl in old_acl - new_acl:
+        changes.append(f"ACL removed: {acl}")
+    for acl in new_acl - old_acl:
+        changes.append(f"ACL added: {acl}")
+
+    return changes
+
 
 # -------------------------------
 # IMPACT ANALYSIS
@@ -247,11 +315,15 @@ def generate_fallback_review(analysis, decision):
 
 
 # -------------------------------
-# AI REVIEW (OPENROUTER FREE)
+# AI REVIEW (OPENROUTER)
 # -------------------------------
 def generate_ai_recommendation(analysis, decision, model="openrouter/free"):
     api_key = st.secrets.get("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_API_KEY")
-    base_url = st.secrets.get("OPENROUTER_BASE_URL") or os.getenv("OPENROUTER_BASE_URL") or "https://openrouter.ai/api/v1"
+    base_url = (
+        st.secrets.get("OPENROUTER_BASE_URL")
+        or os.getenv("OPENROUTER_BASE_URL")
+        or "https://openrouter.ai/api/v1"
+    )
 
     if not api_key:
         return "⚠️ OPENROUTER_API_KEY not found. Add it in Streamlit Secrets."
@@ -296,6 +368,8 @@ def generate_ai_recommendation(analysis, decision, model="openrouter/free"):
             f"⚠️ Free model unavailable/rate-limited: {e}\n\n"
             + generate_fallback_review(analysis, decision)
         )
+
+
 # -------------------------------
 # UI
 # -------------------------------
@@ -325,438 +399,182 @@ def get_config(text, file):
 
 
 if st.button("Analyze"):
-
-    config_a = get_config(
-        config_a_text,
-        config_a_file
-    )
-
-    config_b = get_config(
-        config_b_text,
-        config_b_file
-    )
-
-    # -------------------------------
-    # VALIDATION
-    # -------------------------------
+    config_a = get_config(config_a_text, config_a_file)
+    config_b = get_config(config_b_text, config_b_file)
 
     if not config_a or not config_b:
-
-        st.error(
-            "Provide both configs"
-        )
-
+        st.error("Provide both configs")
     else:
         # -------------------------------
-# CONFIG PARSER
-# -------------------------------
-
-def parse_config(config):
-
-    parsed = {
-
-        "hostname": None,
-
-        "vlans": [],
-
-        "interfaces": [],
-
-        "routing": [],
-
-        "acl": []
-    }
-
-    for line in config.splitlines():
-
-        line = line.strip()
+        # PARSE & COMPARE
+        # -------------------------------
+        parsed_a = parse_config(config_a)
+        parsed_b = parse_config(config_b)
+        changes = compare_configs(parsed_a, parsed_b)
 
         # -------------------------------
-        # HOSTNAME
+        # ENGINE CALLS
         # -------------------------------
+        try:
+            semantic_objects = semantic_normalize(config_a, config_b)
+        except Exception as e:
+            semantic_objects = [{"error": str(e)}]
 
-        if line.startswith("hostname"):
+        try:
+            semantic_changes = semantic_diff(config_a, config_b)
+        except Exception as e:
+            semantic_changes = [{"error": str(e)}]
 
-            parts = line.split()
+        try:
+            topology = build_topology_view(config_a, config_b)
+        except Exception as e:
+            topology = {"error": str(e)}
 
-            if len(parts) > 1:
-                parsed["hostname"] = parts[1]
+        try:
+            blast_radius = calculate_blast_radius(changes)
+        except Exception as e:
+            blast_radius = [{"error": str(e)}]
 
-        # -------------------------------
-        # VLAN
-        # -------------------------------
+        try:
+            relationship_graph = build_relationship_graph(config_a, config_b)
+        except Exception as e:
+            relationship_graph = [{"error": str(e)}]
 
-        elif line.startswith("vlan"):
+        try:
+            advanced_risk = advanced_risk_reasoning(changes)
+        except Exception as e:
+            advanced_risk = {"error": str(e)}
 
-            parsed["vlans"].append(line)
-
-        # -------------------------------
-        # INTERFACE
-        # -------------------------------
-
-        elif line.startswith("interface"):
-
-            parsed["interfaces"].append(line)
-
-        # -------------------------------
-        # ROUTING
-        # -------------------------------
-
-        elif (
-            "router ospf" in line
-            or
-            "router bgp" in line
-            or
-            "set protocols ospf" in line
-            or
-            "set protocols bgp" in line
-        ):
-
-            parsed["routing"].append(line)
-
-        # -------------------------------
-        # ACL
-        # -------------------------------
-
-        elif (
-            line.startswith("access-list")
-            or
-            "firewall filter" in line
-        ):
-
-            parsed["acl"].append(line)
-
-    return parsed
-
-
-# -------------------------------
-# CONFIG COMPARISON
-# -------------------------------
-
-def compare_configs(old, new):
-
-    changes = []
-
-    # -------------------------------
-    # VLANS
-    # -------------------------------
-
-    old_vlans = set(old["vlans"])
-    new_vlans = set(new["vlans"])
-
-    for vlan in old_vlans - new_vlans:
-
-        changes.append(
-            f"VLAN removed: {vlan}"
-        )
-
-    for vlan in new_vlans - old_vlans:
-
-        changes.append(
-            f"VLAN added: {vlan}"
-        )
-
-    # -------------------------------
-    # INTERFACES
-    # -------------------------------
-
-    old_int = set(old["interfaces"])
-    new_int = set(new["interfaces"])
-
-    for intf in old_int - new_int:
-
-        changes.append(
-            f"Interface removed: {intf}"
-        )
-
-    for intf in new_int - old_int:
-
-        changes.append(
-            f"Interface added: {intf}"
-        )
-
-    # -------------------------------
-    # ROUTING
-    # -------------------------------
-
-    old_routing = set(old["routing"])
-    new_routing = set(new["routing"])
-
-    for r in old_routing - new_routing:
-
-        changes.append(
-            f"Routing removed: {r}"
-        )
-
-    for r in new_routing - old_routing:
-
-        changes.append(
-            f"Routing added: {r}"
-        )
-
-    # -------------------------------
-    # ACL
-    # -------------------------------
-
-    old_acl = set(old["acl"])
-    new_acl = set(new["acl"])
-
-    for acl in old_acl - new_acl:
-
-        changes.append(
-            f"ACL removed: {acl}"
-        )
-
-    for acl in new_acl - old_acl:
-
-        changes.append(
-            f"ACL added: {acl}"
-        )
-
-    return changes
         # -------------------------------
         # IMPACT ANALYSIS
         # -------------------------------
-
-        analysis = impact_analysis(
-            changes
-        )
-
-        decision = final_decision(
-            analysis
-        )
+        analysis = impact_analysis(changes)
+        decision = final_decision(analysis)
 
         # -------------------------------
         # PATTERN AI
         # -------------------------------
-
-        pattern = pattern_summary(
-            changes
-        )
+        pattern = pattern_summary(changes)
 
         # -------------------------------
         # CHANGES
         # -------------------------------
-
-        st.subheader(
-            "🔍 Changes Detected"
-        )
+        st.subheader("🔍 Changes Detected")
 
         if not changes:
-
-            st.write(
-                "No changes detected"
-            )
-
+            st.write("No changes detected")
         else:
-
-            changes_table = [
-                {"Change": c}
-                for c in changes
-            ]
-
-            st.table(
-                changes_table
-            )
+            changes_table = [{"Change": c} for c in changes]
+            st.table(changes_table)
 
         st.divider()
 
         # -------------------------------
         # SAVE HISTORY
         # -------------------------------
-
         history = load_history()
-
         for a in analysis:
-
-            entry = {
-                "change": a["change"],
-                "risk": a["risk"]
-            }
-
+            entry = {"change": a["change"], "risk": a["risk"]}
             if entry not in history:
                 history.append(entry)
-
         save_history(history)
 
         # -------------------------------
         # IMPACT ANALYSIS
         # -------------------------------
-
-        st.subheader(
-            "📊 Impact Analysis"
-        )
+        st.subheader("📊 Impact Analysis")
 
         impact_table = [
-
             {
                 "Change": a["change"],
                 "Impact": a["impact"],
                 "Risk": a["risk"],
-                "Confidence":
-                    a["confidence"],
-                "Confidence Reason":
-                    a["confidence_reason"]
+                "Confidence": a["confidence"],
+                "Confidence Reason": a["confidence_reason"]
             }
-
             for a in analysis
         ]
-
-        st.table(
-            impact_table
-        )
+        st.table(impact_table)
 
         st.divider()
 
         # -------------------------------
         # PATTERN AI
         # -------------------------------
-
-        st.subheader(
-            "🧠 Pattern AI Risk Engine"
-        )
+        st.subheader("🧠 Pattern AI Risk Engine")
 
         st.table([{
-
-            "Pattern Risk Score":
-                pattern["risk_score"],
-
-            "Pattern Risk Level":
-                pattern["risk_level"],
-
-            "Similarity Score":
-                pattern["similarity_score"],
-
-            "Matched History":
-                pattern[
-                    "matched_history_changes"
-                ]
-
+            "Pattern Risk Score": pattern["risk_score"],
+            "Pattern Risk Level": pattern["risk_level"],
+            "Similarity Score": pattern["similarity_score"],
+            "Matched History": pattern["matched_history_changes"]
         }])
 
-        st.caption(
-            "Pattern features extracted"
-        )
-
-        st.table([
-            pattern["features"]
-        ])
+        st.caption("Pattern features extracted")
+        st.table([pattern["features"]])
 
         st.divider()
 
         # -------------------------------
         # SEMANTIC OBJECTS
         # -------------------------------
-
-        st.subheader(
-            "🧠 Semantic Objects"
-        )
-
-        st.table(
-            semantic_objects
-        )
+        st.subheader("🧠 Semantic Objects")
+        st.table(semantic_objects)
 
         st.divider()
 
         # -------------------------------
         # SEMANTIC DIFF
         # -------------------------------
-
-        st.subheader(
-            "🔄 Semantic Diff"
-        )
-
-        st.table(
-            semantic_changes
-        )
+        st.subheader("🔄 Semantic Diff")
+        st.table(semantic_changes)
 
         st.divider()
 
         # -------------------------------
         # TOPOLOGY
         # -------------------------------
-
-        st.subheader(
-            "🌐 Topology Intelligence"
-        )
-
-        st.json(
-            topology
-        )
+        st.subheader("🌐 Topology Intelligence")
+        st.json(topology)
 
         st.divider()
 
         # -------------------------------
         # BLAST RADIUS
         # -------------------------------
-
-        st.subheader(
-            "💥 Blast Radius"
-        )
-
-        st.table(
-            blast_radius
-        )
+        st.subheader("💥 Blast Radius")
+        st.table(blast_radius)
 
         st.divider()
 
         # -------------------------------
         # RELATIONSHIP GRAPH
         # -------------------------------
-
-        st.subheader(
-            "🔗 Relationship Graph"
-        )
-
-        st.table(
-            relationship_graph
-        )
+        st.subheader("🔗 Relationship Graph")
+        st.table(relationship_graph)
 
         st.divider()
 
         # -------------------------------
         # ADVANCED RISK
         # -------------------------------
-
-        st.subheader(
-            "🚨 Advanced Risk Reasoning"
-        )
-
-        st.table([
-            advanced_risk
-        ])
+        st.subheader("🚨 Advanced Risk Reasoning")
+        st.table([advanced_risk])
 
         st.divider()
 
         # -------------------------------
         # FINAL DECISION
         # -------------------------------
-
-        st.subheader(
-            "🚨 Final Decision"
-        )
-
-        st.write(
-            decision
-        )
+        st.subheader("🚨 Final Decision")
+        st.write(decision)
 
         st.divider()
 
         # -------------------------------
         # AI REVIEW
         # -------------------------------
+        st.subheader("🤖 AI Change Review")
 
-        st.subheader(
-            "🤖 AI Change Review"
-        )
-
-        ai_text = (
-            generate_ai_recommendation(
-                analysis,
-                decision,
-                ai_model
-            )
-        )
-
-        st.markdown(
-            ai_text
-        )
+        ai_text = generate_ai_recommendation(analysis, decision, ai_model)
+        st.markdown(ai_text)
