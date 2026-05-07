@@ -1,4 +1,5 @@
 
+from engine.taxonomy import SEMANTIC_TAXONOMY
 
 # -------------------------------
 # SEMANTIC NORMALIZATION
