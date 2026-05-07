@@ -4,8 +4,425 @@ import streamlit as st
 from openai import OpenAI
 
 HISTORY_FILE = "change_history.json"
+# -------------------------------
+# SEMANTIC TAXONOMY v3
+# -------------------------------
+
+SEMANTIC_TAXONOMY = {
+
+    "routing": {
+        "ospf": [
+            "router ospf",
+            "set protocols ospf"
+        ],
+        "bgp": [
+            "router bgp",
+            "set protocols bgp"
+        ]
+    },
+
+    "security": {
+        "acl": [
+            "access-list",
+            "firewall filter"
+        ],
+        "aaa": [
+            "aaa",
+            "tacacs",
+            "radius",
+            "set system login"
+        ],
+        "ssh": [
+            "transport input ssh",
+            "set system services ssh"
+        ],
+        "telnet": [
+            "transport input telnet",
+            "set system services telnet"
+        ]
+    },
+
+    "monitoring": {
+        "snmp": [
+            "snmp-server",
+            "set snmp"
+        ],
+        "syslog": [
+            "logging host",
+            "set system syslog"
+        ],
+        "netflow": [
+            "flow exporter",
+            "ip flow",
+            "netflow"
+        ]
+    },
+
+    "layer2": {
+        "vlan": [
+            "vlan",
+            "set vlans"
+        ],
+        "stp": [
+            "spanning-tree",
+            "rstp",
+            "mstp"
+        ],
+        "lldp": [
+            "lldp",
+            "cdp"
+        ]
+    },
+
+    "layer2_security": {
+        "port_security": [
+            "switchport port-security"
+        ],
+        "dhcp_snooping": [
+            "ip dhcp snooping"
+        ],
+        "arp_inspection": [
+            "ip arp inspection"
+        ]
+    },
+
+    "interface": {
+        "physical_interface": [
+            "interface",
+            "set interfaces"
+        ],
+        "port_channel": [
+            "port-channel",
+            "ae"
+        ]
+    },
+
+    "services": {
+        "ntp": [
+            "ntp server",
+            "set system ntp"
+        ],
+        "dhcp": [
+            "ip dhcp",
+            "system services dhcp"
+        ],
+        "dns": [
+            "ip name-server",
+            "system name-server"
+        ]
+    },
+
+    "vpn": {
+        "ipsec": [
+            "crypto isakmp",
+            "set security ipsec"
+        ],
+        "gre": [
+            "interface tunnel",
+            "gr-"
+        ]
+    },
+
+    "qos": {
+        "policy_map": [
+            "policy-map",
+            "class-map",
+            "class-of-service"
+        ]
+    }
+}
 
 
+# -------------------------------
+# DEVICE ROLE MODEL
+# -------------------------------
+
+DEVICE_ROLE_RULES = {
+
+    "core_router": [
+        "core",
+        "border",
+        "wan"
+    ],
+
+    "distribution_switch": [
+        "dist",
+        "distribution"
+    ],
+
+    "access_switch": [
+        "access"
+    ],
+
+    "firewall": [
+        "firewall",
+        "paloalto",
+        "fortigate"
+    ]
+}
+
+
+# -------------------------------
+# DETECT DEVICE ROLE
+# -------------------------------
+
+def detect_device_role(hostname):
+
+    if not hostname:
+        return "unknown"
+
+    h = hostname.lower()
+
+    for role, keywords in DEVICE_ROLE_RULES.items():
+
+        for keyword in keywords:
+
+            if keyword in h:
+                return role
+
+    return "unknown"
+
+
+# -------------------------------
+# SEMANTIC NORMALIZATION
+# -------------------------------
+
+def semantic_normalize(config, parsed_data):
+
+    semantic_objects = []
+
+    hostname = parsed_data.get("hostname")
+    device_role = detect_device_role(hostname)
+
+    for raw_line in config.splitlines():
+
+        line = raw_line.strip().lower()
+
+        if not line:
+            continue
+
+        for domain, features in SEMANTIC_TAXONOMY.items():
+
+            for feature, patterns in features.items():
+
+                for pattern in patterns:
+
+                    if pattern in line:
+
+                        semantic_objects.append({
+
+                            "hostname": hostname,
+                            "device_role": device_role,
+
+                            "domain": domain,
+                            "feature": feature,
+
+                            "raw_config": raw_line,
+
+                            "risk": semantic_default_risk(domain, feature),
+
+                            "dependencies":
+                                semantic_dependencies(feature),
+
+                            "operational_impact":
+                                semantic_operational_impact(feature)
+                        })
+
+    return semantic_objects
+
+
+# -------------------------------
+# DEFAULT RISK ENGINE
+# -------------------------------
+
+def semantic_default_risk(domain, feature):
+
+    HIGH = [
+        "ospf",
+        "bgp",
+        "acl",
+        "aaa",
+        "telnet",
+        "ipsec"
+    ]
+
+    MEDIUM = [
+        "stp",
+        "lldp",
+        "netflow",
+        "snmp",
+        "policy_map"
+    ]
+
+    if feature in HIGH:
+        return "HIGH"
+
+    if feature in MEDIUM:
+        return "MEDIUM"
+
+    return "LOW"
+
+
+# -------------------------------
+# DEPENDENCY ENGINE
+# -------------------------------
+
+def semantic_dependencies(feature):
+
+    dependency_map = {
+
+        "ospf": [
+            "interface",
+            "ip_address"
+        ],
+
+        "bgp": [
+            "interface",
+            "routing"
+        ],
+
+        "vlan": [
+            "interface",
+            "stp"
+        ],
+
+        "stp": [
+            "vlan",
+            "interface"
+        ],
+
+        "snmp": [
+            "monitoring"
+        ],
+
+        "policy_map": [
+            "qos",
+            "traffic"
+        ]
+    }
+
+    return dependency_map.get(feature, [])
+
+
+# -------------------------------
+# OPERATIONAL IMPACT ENGINE
+# -------------------------------
+
+def semantic_operational_impact(feature):
+
+    impact_map = {
+
+        "ospf": [
+            "neighbor_loss",
+            "route_withdrawal"
+        ],
+
+        "bgp": [
+            "external_connectivity_loss"
+        ],
+
+        "vlan": [
+            "user_connectivity_loss"
+        ],
+
+        "stp": [
+            "loop_risk"
+        ],
+
+        "snmp": [
+            "monitoring_visibility_loss"
+        ],
+
+        "telnet": [
+            "security_exposure"
+        ]
+    }
+
+    return impact_map.get(feature, [])
+
+
+# -------------------------------
+# RELATIONSHIP GRAPH
+# -------------------------------
+
+def build_relationship_graph(semantic_objects):
+
+    relationships = []
+
+    for obj in semantic_objects:
+
+        feature = obj["feature"]
+
+        dependencies = obj["dependencies"]
+
+        for dep in dependencies:
+
+            relationships.append({
+
+                "source": feature,
+
+                "target": dep,
+
+                "relationship": "depends_on",
+
+                "device_role": obj["device_role"]
+            })
+
+    return relationships
+
+
+# -------------------------------
+# ADVANCED RISK ENGINE
+# -------------------------------
+
+def advanced_risk_reasoning(semantic_objects):
+
+    score = 0
+    reasons = []
+
+    for obj in semantic_objects:
+
+        role = obj["device_role"]
+        risk = obj["risk"]
+        feature = obj["feature"]
+
+        if risk == "HIGH":
+            score += 25
+
+        elif risk == "MEDIUM":
+            score += 10
+
+        else:
+            score += 3
+
+        if role == "core_router":
+            score += 20
+            reasons.append(
+                f"{feature} affects core routing infrastructure"
+            )
+
+        elif role == "firewall":
+            score += 15
+            reasons.append(
+                f"{feature} affects security perimeter"
+            )
+
+    score = min(score, 100)
+
+    if score >= 80:
+        level = "CRITICAL"
+    elif score >= 50:
+        level = "HIGH"
+    elif score >= 25:
+        level = "MEDIUM"
+    else:
+        level = "LOW"
+
+    return {
+        "advanced_risk_score": score,
+        "advanced_risk_level": level,
+        "reasons": reasons
+    }
 # -------------------------------
 # HISTORY (AI MEMORY)
 # -------------------------------
@@ -416,6 +833,7 @@ def get_config(text, file):
 
 
 if st.button("Analyze"):
+    pattern = pattern_summary(changes)
     config_a = get_config(config_a_text, config_a_file)
     config_b = get_config(config_b_text, config_b_file)
 
@@ -469,9 +887,17 @@ if st.button("Analyze"):
             "Similarity Score": pattern["similarity_score"],
             "Matched Historical Changes": pattern["matched_history_changes"]
         }])
-
+        st.divider()
+        st.subheader("🧠 Semantic Objects")
+        st.table(semantic_objects)
         st.caption("Pattern features extracted from this change set")
         st.table([pattern["features"]])
+        st.divider()
+        st.subheader("🔗 Relationship Graph")
+        st.table(relationship_graph)
+        st.divider()
+        st.subheader("🚨 Advanced Risk Reasoning")
+        st.table([advanced_risk])
 
         st.divider()
 
@@ -483,3 +909,19 @@ if st.button("Analyze"):
         st.subheader("🤖 AI Change Review")
         ai_text = generate_ai_recommendation(analysis, decision, ai_model)
         st.markdown(ai_text)
+# -------------------------------
+# SEMANTIC ENGINE
+# -------------------------------
+
+semantic_objects = semantic_normalize(
+    config_b,
+    parsed_b
+)
+
+relationship_graph = build_relationship_graph(
+    semantic_objects
+)
+
+advanced_risk = advanced_risk_reasoning(
+    semantic_objects
+)
