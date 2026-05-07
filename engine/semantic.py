@@ -137,6 +137,44 @@ def semantic_dependencies(feature):
     }
 
     return dependency_map.get(feature, [])
+    
+# -------------------------------
+# OPERATIONAL IMPACT ENGINE
+# -------------------------------
+
+def semantic_operational_impact(feature):
+
+    impact_map = {
+
+        "ospf": [
+            "neighbor_loss",
+            "route_withdrawal"
+        ],
+
+        "bgp": [
+            "external_connectivity_loss"
+        ],
+
+        "vlan": [
+            "user_connectivity_loss"
+        ],
+
+        "stp": [
+            "loop_risk"
+        ],
+
+        "snmp": [
+            "monitoring_visibility_loss"
+        ],
+
+        "telnet": [
+            "security_exposure"
+        ]
+    }
+
+    return impact_map.get(feature, [])
+
+
 
 
 
