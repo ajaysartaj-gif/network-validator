@@ -508,11 +508,11 @@ st.divider()
         # SAVE HISTORY
         # -------------------------------
 history = load_history()
-        for a in analysis:
-            entry = {"change": a["change"], "risk": a["risk"]}
-            if entry not in history:
-                history.append(entry)
-        save_history(history)
+    for a in analysis:
+        entry = {"change": a["change"], "risk": a["risk"]}
+    if entry not in history:
+            history.append(entry)
+    save_history(history)
 
         # -------------------------------
         # IMPACT ANALYSIS
