@@ -348,6 +348,172 @@ if st.button("Analyze"):
 
     else:
         # -------------------------------
+# CONFIG PARSER
+# -------------------------------
+
+def parse_config(config):
+
+    parsed = {
+
+        "hostname": None,
+
+        "vlans": [],
+
+        "interfaces": [],
+
+        "routing": [],
+
+        "acl": []
+    }
+
+    for line in config.splitlines():
+
+        line = line.strip()
+
+        # -------------------------------
+        # HOSTNAME
+        # -------------------------------
+
+        if line.startswith("hostname"):
+
+            parts = line.split()
+
+            if len(parts) > 1:
+                parsed["hostname"] = parts[1]
+
+        # -------------------------------
+        # VLAN
+        # -------------------------------
+
+        elif line.startswith("vlan"):
+
+            parsed["vlans"].append(line)
+
+        # -------------------------------
+        # INTERFACE
+        # -------------------------------
+
+        elif line.startswith("interface"):
+
+            parsed["interfaces"].append(line)
+
+        # -------------------------------
+        # ROUTING
+        # -------------------------------
+
+        elif (
+            "router ospf" in line
+            or
+            "router bgp" in line
+            or
+            "set protocols ospf" in line
+            or
+            "set protocols bgp" in line
+        ):
+
+            parsed["routing"].append(line)
+
+        # -------------------------------
+        # ACL
+        # -------------------------------
+
+        elif (
+            line.startswith("access-list")
+            or
+            "firewall filter" in line
+        ):
+
+            parsed["acl"].append(line)
+
+    return parsed
+
+
+# -------------------------------
+# CONFIG COMPARISON
+# -------------------------------
+
+def compare_configs(old, new):
+
+    changes = []
+
+    # -------------------------------
+    # VLANS
+    # -------------------------------
+
+    old_vlans = set(old["vlans"])
+    new_vlans = set(new["vlans"])
+
+    for vlan in old_vlans - new_vlans:
+
+        changes.append(
+            f"VLAN removed: {vlan}"
+        )
+
+    for vlan in new_vlans - old_vlans:
+
+        changes.append(
+            f"VLAN added: {vlan}"
+        )
+
+    # -------------------------------
+    # INTERFACES
+    # -------------------------------
+
+    old_int = set(old["interfaces"])
+    new_int = set(new["interfaces"])
+
+    for intf in old_int - new_int:
+
+        changes.append(
+            f"Interface removed: {intf}"
+        )
+
+    for intf in new_int - old_int:
+
+        changes.append(
+            f"Interface added: {intf}"
+        )
+
+    # -------------------------------
+    # ROUTING
+    # -------------------------------
+
+    old_routing = set(old["routing"])
+    new_routing = set(new["routing"])
+
+    for r in old_routing - new_routing:
+
+        changes.append(
+            f"Routing removed: {r}"
+        )
+
+    for r in new_routing - old_routing:
+
+        changes.append(
+            f"Routing added: {r}"
+        )
+
+    # -------------------------------
+    # ACL
+    # -------------------------------
+
+    old_acl = set(old["acl"])
+    new_acl = set(new["acl"])
+
+    for acl in old_acl - new_acl:
+
+        changes.append(
+            f"ACL removed: {acl}"
+        )
+
+    for acl in new_acl - old_acl:
+
+        changes.append(
+            f"ACL added: {acl}"
+        )
+
+    return changes
+        # -------------------------------
         # IMPACT ANALYSIS
         # -------------------------------
 
