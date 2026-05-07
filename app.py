@@ -330,9 +330,7 @@ if st.button("Analyze"):
 
 if not config_a or not config_b:
 st.error("Provide both configs")
-
-else:
-
+ else:
     parsed_a = parse_config(config_a)
     parsed_b = parse_config(config_b)
 
