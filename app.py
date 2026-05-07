@@ -570,7 +570,7 @@ if st.button("Analyze"):
         # ADVANCED RISK
         # -------------------------------
 
-       try:
+    try:
            advanced_risk_reasoning(
               semantic_objects
               )
