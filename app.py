@@ -803,6 +803,22 @@ def generate_ai_recommendation(analysis, decision, model="openrouter/free"):
             + generate_fallback_review(analysis, decision)
         )
 
+# -------------------------------
+# SEMANTIC ENGINE
+# -------------------------------
+
+semantic_objects = semantic_normalize(
+    config_b,
+    parsed_b
+)
+
+relationship_graph = build_relationship_graph(
+    semantic_objects
+)
+
+advanced_risk = advanced_risk_reasoning(
+    semantic_objects
+)
 
 # -------------------------------
 # UI
@@ -909,19 +925,3 @@ if st.button("Analyze"):
         st.subheader("🤖 AI Change Review")
         ai_text = generate_ai_recommendation(analysis, decision, ai_model)
         st.markdown(ai_text)
-# -------------------------------
-# SEMANTIC ENGINE
-# -------------------------------
-
-semantic_objects = semantic_normalize(
-    config_b,
-    parsed_b
-)
-
-relationship_graph = build_relationship_graph(
-    semantic_objects
-)
-
-advanced_risk = advanced_risk_reasoning(
-    semantic_objects
-)
