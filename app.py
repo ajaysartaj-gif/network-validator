@@ -325,120 +325,353 @@ def get_config(text, file):
 
 
 if st.button("Analyze"):
-    config_a = get_config(config_a_text, config_a_file)
-    config_b = get_config(config_b_text, config_b_file)
 
-
-st.error("Provide both configs")
-  else:
-     parsed_a = parse_config(config_a)
-     parsed_b = parse_config(config_b)
-
-    semantic_objects = semantic_normalize(
-        config_b,
-        parsed_b)
-
-    old_semantic = semantic_normalize(
-        config_a,
-        parsed_a
+    config_a = get_config(
+        config_a_text,
+        config_a_file
     )
 
-    semantic_changes = semantic_diff(
-        old_semantic,
-        semantic_objects
+    config_b = get_config(
+        config_b_text,
+        config_b_file
     )
 
-    relationship_graph = build_relationship_graph(
-        semantic_objects
-    )
+    # -------------------------------
+    # VALIDATION
+    # -------------------------------
 
-    topology = build_topology_view(
-        semantic_objects
-    )
+    if not config_a or not config_b:
 
-    blast_radius = calculate_blast_radius(
-        semantic_objects
-    )
+        st.error(
+            "Provide both configs"
+        )
 
-    advanced_risk = advanced_risk_reasoning(
-        semantic_objects
-    )
-
-    changes = compare_configs(parsed_a, parsed_b)
-
-    pattern = pattern_summary(changes)
-
-    changes = sorted(changes)
-
-    analysis = impact_analysis(changes)
-
-    decision = final_decision(analysis)
-    st.subheader("🔍 Changes Detected")
-    if not changes:
-       st.write("No changes detected")
     else:
-        changes_table = [{"Change": c} for c in changes]
-        st.table(changes_table)
+
+        # -------------------------------
+        # PARSE CONFIGS
+        # -------------------------------
+
+        parsed_a = parse_config(config_a)
+
+        parsed_b = parse_config(config_b)
+
+        # -------------------------------
+        # SEMANTIC NORMALIZATION
+        # -------------------------------
+
+        semantic_objects = semantic_normalize(
+            config_b,
+            parsed_b
+        )
+
+        old_semantic = semantic_normalize(
+            config_a,
+            parsed_a
+        )
+
+        # -------------------------------
+        # SEMANTIC DIFF
+        # -------------------------------
+
+        semantic_changes = semantic_diff(
+            old_semantic,
+            semantic_objects
+        )
+
+        # -------------------------------
+        # RELATIONSHIP GRAPH
+        # -------------------------------
+
+        relationship_graph = (
+            build_relationship_graph(
+                semantic_objects
+            )
+        )
+
+        # -------------------------------
+        # TOPOLOGY ENGINE
+        # -------------------------------
+
+        topology = build_topology_view(
+            semantic_objects
+        )
+
+        # -------------------------------
+        # BLAST RADIUS
+        # -------------------------------
+
+        blast_radius = (
+            calculate_blast_radius(
+                semantic_objects
+            )
+        )
+
+        # -------------------------------
+        # ADVANCED RISK
+        # -------------------------------
+
+        advanced_risk = (
+            advanced_risk_reasoning(
+                semantic_objects
+            )
+        )
+
+        # -------------------------------
+        # RAW CONFIG DIFF
+        # -------------------------------
+
+        changes = compare_configs(
+            parsed_a,
+            parsed_b
+        )
+
+        changes = sorted(changes)
+
+        # -------------------------------
+        # IMPACT ANALYSIS
+        # -------------------------------
+
+        analysis = impact_analysis(
+            changes
+        )
+
+        decision = final_decision(
+            analysis
+        )
+
+        # -------------------------------
+        # PATTERN AI
+        # -------------------------------
+
+        pattern = pattern_summary(
+            changes
+        )
+
+        # -------------------------------
+        # CHANGES
+        # -------------------------------
+
+        st.subheader(
+            "🔍 Changes Detected"
+        )
+
+        if not changes:
+
+            st.write(
+                "No changes detected"
+            )
+
+        else:
+
+            changes_table = [
+                {"Change": c}
+                for c in changes
+            ]
+
+            st.table(
+                changes_table
+            )
 
         st.divider()
 
+        # -------------------------------
+        # SAVE HISTORY
+        # -------------------------------
+
         history = load_history()
+
         for a in analysis:
-            entry = {"change": a["change"], "risk": a["risk"]}
+
+            entry = {
+                "change": a["change"],
+                "risk": a["risk"]
+            }
+
             if entry not in history:
                 history.append(entry)
+
         save_history(history)
 
-        st.subheader("📊 Impact Analysis")
+        # -------------------------------
+        # IMPACT ANALYSIS
+        # -------------------------------
+
+        st.subheader(
+            "📊 Impact Analysis"
+        )
+
         impact_table = [
+
             {
                 "Change": a["change"],
                 "Impact": a["impact"],
                 "Risk": a["risk"],
-                "Confidence": a["confidence"],
-                "Confidence Reason": a["confidence_reason"]
+                "Confidence":
+                    a["confidence"],
+                "Confidence Reason":
+                    a["confidence_reason"]
             }
+
             for a in analysis
         ]
-        st.table(impact_table)
+
+        st.table(
+            impact_table
+        )
 
         st.divider()
 
-        st.subheader("🧠 Pattern AI Risk Engine")
+        # -------------------------------
+        # PATTERN AI
+        # -------------------------------
+
+        st.subheader(
+            "🧠 Pattern AI Risk Engine"
+        )
+
         st.table([{
-            "Pattern Risk Score (0-100)": pattern["risk_score"],
-            "Pattern Risk Level": pattern["risk_level"],
-            "Similarity Score": pattern["similarity_score"],
-            "Matched Historical Changes": pattern["matched_history_changes"]
+
+            "Pattern Risk Score":
+                pattern["risk_score"],
+
+            "Pattern Risk Level":
+                pattern["risk_level"],
+
+            "Similarity Score":
+                pattern["similarity_score"],
+
+            "Matched History":
+                pattern[
+                    "matched_history_changes"
+                ]
+
         }])
-        st.divider()
-        st.subheader("🧠 Semantic Objects")
-        st.divider()
-        st.subheader("🔄 Semantic Diff")
-        st.table(semantic_changes)
-        st.divider()
-        st.subheader("🌐 Topology Intelligence")
-        st.json(topology)
-        st.divider()
-        st.subheader("💥 Blast Radius")
-        st.table(blast_radius)
-        st.table(semantic_objects)
-        st.caption("Pattern features extracted from this change set")
-        st.table([pattern["features"]])
-        st.divider()
-        st.subheader("🔗 Relationship Graph")
-        st.table(relationship_graph)
-        st.divider()
-        st.subheader("🚨 Advanced Risk Reasoning")
-        st.table([advanced_risk])
+
+        st.caption(
+            "Pattern features extracted"
+        )
+
+        st.table([
+            pattern["features"]
+        ])
 
         st.divider()
 
-        st.subheader("🚨 Final Decision")
-        st.write(decision)
+        # -------------------------------
+        # SEMANTIC OBJECTS
+        # -------------------------------
+
+        st.subheader(
+            "🧠 Semantic Objects"
+        )
+
+        st.table(
+            semantic_objects
+        )
 
         st.divider()
 
-        st.subheader("🤖 AI Change Review")
-        ai_text = generate_ai_recommendation(analysis, decision, ai_model)
-        st.markdown(ai_text)
+        # -------------------------------
+        # SEMANTIC DIFF
+        # -------------------------------
+
+        st.subheader(
+            "🔄 Semantic Diff"
+        )
+
+        st.table(
+            semantic_changes
+        )
+
+        st.divider()
+
+        # -------------------------------
+        # TOPOLOGY
+        # -------------------------------
+
+        st.subheader(
+            "🌐 Topology Intelligence"
+        )
+
+        st.json(
+            topology
+        )
+
+        st.divider()
+
+        # -------------------------------
+        # BLAST RADIUS
+        # -------------------------------
+
+        st.subheader(
+            "💥 Blast Radius"
+        )
+
+        st.table(
+            blast_radius
+        )
+
+        st.divider()
+
+        # -------------------------------
+        # RELATIONSHIP GRAPH
+        # -------------------------------
+
+        st.subheader(
+            "🔗 Relationship Graph"
+        )
+
+        st.table(
+            relationship_graph
+        )
+
+        st.divider()
+
+        # -------------------------------
+        # ADVANCED RISK
+        # -------------------------------
+
+        st.subheader(
+            "🚨 Advanced Risk Reasoning"
+        )
+
+        st.table([
+            advanced_risk
+        ])
+
+        st.divider()
+
+        # -------------------------------
+        # FINAL DECISION
+        # -------------------------------
+
+        st.subheader(
+            "🚨 Final Decision"
+        )
+
+        st.write(
+            decision
+        )
+
+        st.divider()
+
+        # -------------------------------
+        # AI REVIEW
+        # -------------------------------
+
+        st.subheader(
+            "🤖 AI Change Review"
+        )
+
+        ai_text = (
+            generate_ai_recommendation(
+                analysis,
+                decision,
+                ai_model
+            )
+        )
+
+        st.markdown(
+            ai_text
+        )
