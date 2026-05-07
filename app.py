@@ -2,14 +2,7 @@ import json
 import os
 import streamlit as st
 from openai import OpenAI
-from engine.taxonomy import SEMANTIC_TAXONOMY
-from engine.semantic_engine import (
-    detect_device_role,
-    semantic_normalize,
-    semantic_default_risk,
-    semantic_dependencies,
-    semantic_operational_impact
-)
+from engine.semantic_engine import semantic_normalize
 
 HISTORY_FILE = "change_history.json"
 # -------------------------------
@@ -442,7 +435,7 @@ if st.button("Analyze"):
         changes = sorted(changes)
         analysis = impact_analysis(changes)
         decision = final_decision(analysis)
-        pattern = pattern_summary(changes)
+        
 
         st.subheader("🔍 Changes Detected")
         if not changes:
