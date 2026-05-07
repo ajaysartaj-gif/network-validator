@@ -327,12 +327,12 @@ def get_config(text, file):
 if st.button("Analyze"):
     config_a = get_config(config_a_text, config_a_file)
     config_b = get_config(config_b_text, config_b_file)
-if not config_a or not config_b:
+
 
 st.error("Provide both configs")
- else:
-    parsed_a = parse_config(config_a)
-    parsed_b = parse_config(config_b)
+  else:
+     parsed_a = parse_config(config_a)
+     parsed_b = parse_config(config_b)
 
     semantic_objects = semantic_normalize(
         config_b,
