@@ -13,34 +13,6 @@ from engine.semantic_engine import (
 
 HISTORY_FILE = "change_history.json"
 # -------------------------------
-# DEVICE ROLE MODEL
-# -------------------------------
-
-DEVICE_ROLE_RULES = {
-
-    "core_router": [
-        "core",
-        "border",
-        "wan"
-    ],
-
-    "distribution_switch": [
-        "dist",
-        "distribution"
-    ],
-
-    "access_switch": [
-        "access"
-    ],
-
-    "firewall": [
-        "firewall",
-        "paloalto",
-        "fortigate"
-    ]
-}
-
-# -------------------------------
 # RELATIONSHIP GRAPH
 # -------------------------------
 
@@ -530,26 +502,23 @@ def get_config(text, file):
 
 
 if st.button("Analyze"):
-    pattern = pattern_summary(changes)
     config_a = get_config(config_a_text, config_a_file)
     config_b = get_config(config_b_text, config_b_file)
-
-    semantic_objects = semantic_normalize(
-    config_b,
-    parsed_b)
-
-    relationship_graph = build_relationship_graph(
-    semantic_objects)
-
-    advanced_risk = advanced_risk_reasoning(
-    semantic_objects)
-
+    
 
     if not config_a or not config_b:
         st.error("Provide both configs (paste or upload)")
     else:
         parsed_a = parse_config(config_a)
         parsed_b = parse_config(config_b)
+        semantic_objects = semantic_normalize(
+        config_b,
+        parsed_b)
+        relationship_graph = build_relationship_graph(
+        semantic_objects)
+        advanced_risk = advanced_risk_reasoning(
+        semantic_objects)
+
 
         changes = compare_configs(parsed_a, parsed_b)
         changes = sorted(changes)
