@@ -571,12 +571,8 @@ if st.button("Analyze"):
         # -------------------------------
 
         try:
-
-            advanced_risk = (
-                advanced_risk_reasoning(
-                    changed_semantic_objects
-                )
-            )
+              advanced_risk_reasoning(
+              semantic_objects)
 
         except Exception as e:
 
