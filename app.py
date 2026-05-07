@@ -17,10 +17,6 @@ from engine.topology_engine import (
 
 from engine.blast_radius_engine import (
     calculate_blast_radius)
-from engine.parser_engine import (
-    parse_config,
-    compare_configs
-)
 from engine.semantic_engine import semantic_normalize
 
 HISTORY_FILE = "change_history.json"
