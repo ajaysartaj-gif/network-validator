@@ -396,23 +396,7 @@ def get_config(text, file):
         return read_file(file)
     else:
         return ""
-# Replace Your Entire Analyze Block With This
 
-Delete EVERYTHING from:
-
-```python
-if st.button("Analyze"):
-```
-
-until:
-
-```python
-st.markdown(ai_text)
-```
-
-Then paste this COMPLETE clean block.
-
-```python
 if st.button("Analyze"):
 
     # -------------------------------
