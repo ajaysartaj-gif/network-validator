@@ -2,7 +2,7 @@ import json
 import os
 import streamlit as st
 from openai import OpenAI
-from taxonomy import SEMANTIC_TAXONOMY
+from engine.taxonomy import SEMANTIC_TAXONOMY
 
 HISTORY_FILE = "change_history.json"
 # -------------------------------
