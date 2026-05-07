@@ -17,6 +17,11 @@ from engine.topology_engine import (
 
 from engine.blast_radius_engine import (
     calculate_blast_radius)
+from engine.parser_engine import (
+    parse_config,
+    compare_configs
+)
+from engine.semantic_engine import semantic_normalize
 
 HISTORY_FILE = "change_history.json"
 # -------------------------------
@@ -326,45 +331,55 @@ def get_config(text, file):
 if st.button("Analyze"):
     config_a = get_config(config_a_text, config_a_file)
     config_b = get_config(config_b_text, config_b_file)
-    
 
-    if not config_a or not config_b:
-        st.error("Provide both configs (paste or upload)")
-    
-    else:
-        semantic_objects = semantic_normalize(
-        config_b,)
-        old_semantic = semantic_normalize(
-        config_a,)
+if not config_a or not config_b:
+    st.error("Provide both configs")
 
-        semantic_changes = semantic_diff(
+else:
+
+    parsed_a = parse_config(config_a)
+    parsed_b = parse_config(config_b)
+
+    semantic_objects = semantic_normalize(
+        config_b,
+        parsed_b
+    )
+
+    old_semantic = semantic_normalize(
+        config_a,
+        parsed_a
+    )
+
+    semantic_changes = semantic_diff(
         old_semantic,
-        semantic_objects)
+        semantic_objects
+    )
 
-        relationship_graph = build_relationship_graph(
-        semantic_objects)
-        topology = build_topology_view(
-        semantic_objects)
+    relationship_graph = build_relationship_graph(
+        semantic_objects
+    )
 
-        blast_radius = calculate_blast_radius(
-        semantic_objects)
+    topology = build_topology_view(
+        semantic_objects
+    )
 
-        advanced_risk = advanced_risk_reasoning(
-        semantic_objects)
-        
-        relationship_graph = build_relationship_graph(
-        semantic_objects)
-        advanced_risk = advanced_risk_reasoning(
-        semantic_objects)
+    blast_radius = calculate_blast_radius(
+        semantic_objects
+    )
 
+    advanced_risk = advanced_risk_reasoning(
+        semantic_objects
+    )
 
-        changes = compare_configs(parsed_a, parsed_b)
-        pattern = pattern_summary(changes)
-        changes = sorted(changes)
-        analysis = impact_analysis(changes)
-        decision = final_decision(analysis)
-        
+    changes = compare_configs(parsed_a, parsed_b)
 
+    pattern = pattern_summary(changes)
+
+    changes = sorted(changes)
+
+    analysis = impact_analysis(changes)
+
+    decision = final_decision(analysis)
         st.subheader("🔍 Changes Detected")
         if not changes:
             st.write("No changes detected")
