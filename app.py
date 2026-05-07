@@ -476,19 +476,35 @@ decision = final_decision(
 pattern = pattern_summary(
     changes
 )
+
         # -------------------------------
         # CHANGES
         # -------------------------------
-    st.subheader("🔍 Changes Detected")
+
+        st.subheader(
+            "🔍 Changes Detected"
+        )
 
         if not changes:
-            st.write("No changes detected")
+
+            st.write(
+                "No changes detected"
+            )
+
         else:
-            changes_table = [{"Change": c} for c in changes]
-            st.table(changes_table)
+
+            changes_table = [
+
+                {"Change": c}
+
+                for c in changes
+            ]
+
+            st.table(
+                changes_table
+            )
 
         st.divider()
-
         # -------------------------------
         # SAVE HISTORY
         # -------------------------------
