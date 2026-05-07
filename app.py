@@ -415,7 +415,7 @@ if st.button("Analyze"):
         # -------------------------------
         # ENGINE CALLS
         # -------------------------------
-        try:
+try:
     semantic_objects = semantic_normalize(config_a, config_b)
 except Exception as e:
     semantic_objects = [{"error": str(e)}]
