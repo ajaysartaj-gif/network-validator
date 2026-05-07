@@ -1,5 +1,5 @@
 # -------------------------------
-# RELATIONSHIP GRAPH
+# RELATIONSHIP GRAPH ENGINE
 # -------------------------------
 
 def build_relationship_graph(semantic_objects):
@@ -8,9 +8,8 @@ def build_relationship_graph(semantic_objects):
 
     for obj in semantic_objects:
 
-        feature = obj["feature"]
-
-        dependencies = obj["dependencies"]
+        feature = obj.get("feature")
+        dependencies = obj.get("dependencies", [])
 
         for dep in dependencies:
 
@@ -22,10 +21,11 @@ def build_relationship_graph(semantic_objects):
 
                 "relationship": "depends_on",
 
-                "device_role": obj["device_role"]
+                "device_role":
+                    obj.get("device_role", "unknown"),
+
+                "domain":
+                    obj.get("domain", "unknown")
             })
 
     return relationships
-
-
-
