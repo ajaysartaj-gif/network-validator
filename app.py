@@ -329,7 +329,7 @@ if st.button("Analyze"):
     config_b = get_config(config_b_text, config_b_file)
 
 if not config_a or not config_b:
-    st.error("Provide both configs")
+st.error("Provide both configs")
 
 else:
 
