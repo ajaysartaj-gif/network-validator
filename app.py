@@ -398,6 +398,13 @@ def get_config(text, file):
         return ""
 
 if st.button("Analyze"):
+    semantic_objects = semantic_normalize(
+    config_b,
+    parsed_b)
+
+    old_semantic = semantic_normalize(
+    config_a,
+    parsed_a)
 
     # -------------------------------
     # LOAD CONFIGS
